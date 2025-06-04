@@ -1,0 +1,45 @@
+{
+    "name": "Outlast Governance Token",
+    "description": "A governance NFT that grants voting rights in the Outlast ecosystem. Each token represents one vote in community decisions and platform governance. Hold this token to participate in shaping the future of the Outlast platform through decentralized voting.",
+    "image": "https://api.yourproject.com/images/outlast.png",
+    "external_url": "https://yourproject.com/governance",
+    "background_color": "000000",
+    "attributes": [
+      {
+        "trait_type": "Type",
+        "value": "Governance Token"
+      },
+      {
+        "trait_type": "Voting Power",
+        "value": "1 Vote"
+      },
+      {
+        "trait_type": "Access Level",
+        "value": "Community Member"
+      },
+      {
+        "trait_type": "Platform",
+        "value": "Outlast"
+      },
+      {
+        "trait_type": "Token Standard",
+        "value": "ERC-721"
+      },
+      {
+        "trait_type": "Utility",
+        "value": "Governance Voting"
+      },
+      {
+        "display_type": "date",
+        "trait_type": "Valid From",
+        "value": 1703980800
+      }
+    ],
+    "properties": {
+      "category": "Governance",
+      "utility": "voting_rights",
+      "transferable": true,
+      "voting_weight": 1,
+      "governance_type": "community_dao"
+    }
+  }
