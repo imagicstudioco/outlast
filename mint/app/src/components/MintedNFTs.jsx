@@ -25,6 +25,7 @@ export function MintedNFTs() {
   const [isSDKReady, setIsSDKReady] = useState(false);
 
   useEffect(() => {
+    console.log('MintedNFTs component mounted');
     // Initialize the SDK
     const initializeSDK = async () => {
       console.log('Starting SDK initialization...');
@@ -330,10 +331,17 @@ export function MintedNFTs() {
     setError(null);
   };
 
+  // Add a test click handler
+  const handleTestClick = () => {
+    console.log('Test button clicked');
+    alert('Test button clicked - if you see this, the component is working');
+  };
+
   if (!isSDKReady) {
     return (
       <div className={styles.container}>
         <div>Initializing...</div>
+        <button onClick={handleTestClick}>Test Button</button>
       </div>
     );
   }
@@ -346,6 +354,13 @@ export function MintedNFTs() {
         disabled={isMinting}
       >
         {isMinting ? 'Minting...' : `Mint - ${MINT_PRICE} ETH`}
+      </button>
+
+      <button 
+        onClick={handleTestClick}
+        style={{ marginTop: '10px' }}
+      >
+        Test Button
       </button>
 
       {error && (
