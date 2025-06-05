@@ -15,7 +15,7 @@ contract DeployScript is Script {
             "Outlast Governance Token",           // Collection name
             "OUTLAST",                           // Collection symbol
             payoutWallet,                        // Payout wallet address
-            "https://api.yourproject.com/metadata/outlast.json" // Single metadata URI
+            "https://outlast-nft-mint.vercel.app/metadata/outlast.json" // Single metadata URI
         );
         
         vm.stopBroadcast();
@@ -23,7 +23,7 @@ contract DeployScript is Script {
         console.log("Outlast NFT deployed to:", address(nft));
         console.log("Payout wallet set to:", payoutWallet);
         console.log("Mint price: 0.001 ETH");
-        console.log("All tokens will use metadata from: https://api.yourproject.com/metadata/outlast.json");
-        console.log("Token holders can vote in governance applications");
+        console.log("All tokens will use metadata from: https://outlast-nft-mint.vercel.app/metadata/outlast.json");
+        console.log("Token holders can vote in Outlast Game Mini App");
     }
 }

@@ -1,13 +1,13 @@
 {
-    "name": "Outlast Governance Token",
-    "description": "A governance NFT that grants voting rights in the Outlast ecosystem. Each token represents one vote in community decisions and platform governance. Hold this token to participate in shaping the future of the Outlast platform through decentralized voting.",
-    "image": "https://api.yourproject.com/images/outlast.png",
-    "external_url": "https://yourproject.com/governance",
+    "name": "Outlast NFT",
+    "description": "A NFT that grants voting rights in the Outlast game mini app. Each token represents one vote in participants elimination and Most Valuable Player. Hold this token to participate in voting in the Outlast game mini app.",
+    "image": "https://outlast-nft-mint.vercel.app/images/outlast_nft.png",
+    "external_url": "https://outlast-nft-mint.vercel.app/governance",
     "background_color": "000000",
     "attributes": [
       {
         "trait_type": "Type",
-        "value": "Governance Token"
+        "value": "NFT"
       },
       {
         "trait_type": "Voting Power",
@@ -27,19 +27,19 @@
       },
       {
         "trait_type": "Utility",
-        "value": "Governance Voting"
+        "value": "Voting in Outlast Game Mini App"
       },
       {
         "display_type": "date",
         "trait_type": "Valid From",
-        "value": 1703980800
+        "value": 1717516800
       }
     ],
     "properties": {
-      "category": "Governance",
+      "category": "Outlast Game Mini App",
       "utility": "voting_rights",
       "transferable": true,
       "voting_weight": 1,
-      "governance_type": "community_dao"
+      "game_type": "Outlast Game Mini App"
     }
   }
