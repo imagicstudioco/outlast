@@ -235,19 +235,7 @@ export function MintForm() {
     <>
       <div className={styles.mintForm}>
         <div className={styles.mintTypeSelector}>
-          <button
-            className={`${styles.mintTypeButton} ${mintType === 'free' ? styles.active : ''}`}
-            onClick={() => setMintType('free')}
-          >
-            Free Mint
-          </button>
-          <button
-            className={`${styles.mintTypeButton} ${mintType === 'paid' ? styles.active : ''}`}
-            onClick={() => setMintType('paid')}
-          >
-            Public Mint
-          </button>
-        </div>
+         
         
         <button 
           className={styles.mintButton} 
@@ -268,12 +256,7 @@ export function MintForm() {
         
         <hr className={styles.divider} />
         
-        <button 
-          className={styles.shareButton} 
-          onClick={handleShareOnWarpcast}
-        >
-          Share
-        </button>
+      
       </div>
 
       <div ref={mintedNFTsRef}>
