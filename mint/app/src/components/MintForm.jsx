@@ -88,18 +88,31 @@ export function MintForm() {
         transport: http(),
       });
 
-      // Check if wallet is available
-      console.log('Checking wallet availability...');
-      if (!frame.sdk.wallet || !frame.sdk.wallet.ethProvider) {
-        console.error('Wallet not available');
-        throw new Error('Wallet not available');
+      // Check if frame SDK and wallet are available
+      console.log('Checking Frame SDK and wallet availability...');
+      if (!frame.sdk) {
+        throw new Error('Frame SDK not initialized');
+      }
+
+      if (!frame.sdk.wallet) {
+        throw new Error('Frame wallet not available');
+      }
+
+      if (!frame.sdk.wallet.ethProvider) {
+        throw new Error('Frame wallet provider not available');
       }
 
       // Request wallet connection
       console.log('Requesting wallet connection...');
-      const accounts = await frame.sdk.wallet.ethProvider.request({
-        method: 'eth_requestAccounts'
-      });
+      let accounts;
+      try {
+        accounts = await frame.sdk.wallet.ethProvider.request({
+          method: 'eth_requestAccounts'
+        });
+      } catch (requestError) {
+        console.error('Error requesting accounts:', requestError);
+        throw new Error('Failed to connect wallet');
+      }
 
       console.log('Wallet accounts:', accounts);
 
