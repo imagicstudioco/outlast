@@ -159,7 +159,7 @@
 .shareButton {
   width: 100%;
   padding: 12px 24px;
-  background-color: rgba(241, 11, 145, 0.1)
+  background-color: rgba(241, 11, 145, 0.1);
   color: var(--text-primary);
   border: 2px solid var(--primary);
   border-radius: 25px;

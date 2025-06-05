@@ -6,6 +6,9 @@ import styles from './MintForm.module.css';
 import { createPublicClient, http, parseAbiItem, parseEventLogs, encodeFunctionData, parseEther } from 'viem';
 import { base } from 'viem/chains';
 import * as frame from '@farcaster/frame-sdk';
+import { getDataSuffix, submitReferral } from '@divvi/referral-sdk';
+import { createWalletClient, custom } from 'viem';
+import { mainnet } from 'viem/chains';
 
 const CONTRACT_ADDRESS = '0x9F4F7b2AcFF63C12D1FFa98feB16f9Fdcc529113';
 const MINT_PRICE = '0.001';
@@ -106,6 +109,18 @@ export function MintForm() {
 
       const walletAddress = accounts[0];
 
+      // Create wallet client for Divvi referral
+      const walletClient = createWalletClient({
+        chain: mainnet,
+        transport: custom(window.ethereum),
+      });
+
+      // Get Divvi referral data suffix
+      const dataSuffix = getDataSuffix({
+        consumer: '0xaF108Dd1aC530F1c4BdED13f43E336A9cec92B44',
+        providers: ['0x0423189886d7966f0dd7e7d256898daeee625dca','0xc95876688026be9d6fa7a7c33328bd013effa2bb'],
+      });
+
       // Check current network
       console.log('Checking network...');
       const chainId = await frame.sdk.wallet.ethProvider.request({ 
@@ -160,7 +175,7 @@ export function MintForm() {
             abi: contractABI,
             functionName: 'mint',
             args: []
-          })
+          }) + dataSuffix // Add Divvi data suffix
         });
         console.log('Gas estimate:', gasEstimate.toString());
       } catch (gasError) {
@@ -178,7 +193,7 @@ export function MintForm() {
           abi: contractABI,
           functionName: 'mint',
           args: []
-        }),
+        }) + dataSuffix, // Add Divvi data suffix
         gas: `0x${gasEstimate.toString(16)}`
       };
 
@@ -189,6 +204,12 @@ export function MintForm() {
       });
 
       console.log('Transaction sent:', txHash);
+
+      // Submit referral to Divvi
+      await submitReferral({
+        txHash,
+        chainId: currentChainId,
+      });
 
       // Wait for transaction receipt
       console.log('Waiting for transaction receipt...');
