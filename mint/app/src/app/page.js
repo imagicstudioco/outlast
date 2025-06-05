@@ -21,49 +21,52 @@ export default function Page() {
   const [hasNFT, setHasNFT] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isFrameInitialized, setIsFrameInitialized] = useState(false);
 
   useEffect(() => {
-    console.log('Page useEffect running');
-    const connectWallet = async () => {
-      console.log('Attempting to connect wallet...');
+    const checkFrameInitialization = () => {
+      if (window.frameInitialized) {
+        setIsFrameInitialized(true);
+        setIsLoading(false);
+      } else if (window.frameError) {
+        setError(window.frameError);
+        setIsLoading(false);
+      }
+    };
+
+    // Initial check
+    checkFrameInitialization();
+
+    // Set up an interval to check periodically
+    const interval = setInterval(checkFrameInitialization, 1000);
+
+    // Cleanup
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const checkNFTBalance = async () => {
+      if (!isFrameInitialized || !frame.sdk.wallet?.ethProvider) return;
+
       try {
-        // Request wallet connection
-        console.log('Requesting wallet accounts...');
         const accounts = await frame.sdk.wallet.ethProvider.request({
           method: 'eth_requestAccounts'
         });
 
-        console.log('Wallet accounts received:', accounts);
-
-        if (!accounts || !accounts[0]) {
-          throw new Error('No wallet connected');
+        if (!accounts || accounts.length === 0) {
+          setWalletAddress(null);
+          setHasNFT(false);
+          return;
         }
 
         const address = accounts[0];
-        console.log('Setting wallet address:', address);
         setWalletAddress(address);
 
-        // Check and switch network if needed
-        console.log('Checking network...');
-        const chainId = await frame.sdk.wallet.ethProvider.request({ method: 'eth_chainId' });
-        console.log('Current chain ID:', parseInt(chainId, 16));
-        
-        if (parseInt(chainId, 16) !== 8453) {
-          console.log('Switching to Base network...');
-          await frame.sdk.wallet.ethProvider.request({
-            method: 'wallet_switchEthereumChain',
-            params: [{ chainId: '0x2105' }]
-          });
-        }
-
-        // Check NFT balance
-        console.log('Creating public client...');
         const client = createPublicClient({
           chain: base,
           transport: http(),
         });
 
-        console.log('Checking NFT balance...');
         const balance = await client.readContract({
           address: CONTRACT_ADDRESS,
           abi: contractABI,
@@ -71,25 +74,22 @@ export default function Page() {
           args: [address],
         });
 
-        console.log('NFT balance:', balance.toString());
         setHasNFT(balance > 0);
       } catch (err) {
-        console.error('Error connecting wallet:', err);
-        setError(err.message);
-      } finally {
-        setIsLoading(false);
+        console.error('Error checking NFT balance:', err);
+        setError('Failed to check NFT balance');
       }
     };
 
-    connectWallet();
-  }, []);
+    checkNFTBalance();
+  }, [isFrameInitialized]);
 
   if (isLoading) {
     console.log('Page is in loading state');
     return (
       <div className={styles.container}>
         <main className={styles.main}>
-          <div className={styles.loading}>Connecting to wallet...</div>
+          <div className={styles.loading}>Initializing...</div>
         </main>
       </div>
     );

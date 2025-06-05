@@ -22,19 +22,23 @@ export function MintForm() {
   const [isSDKReady, setIsSDKReady] = useState(false);
 
   useEffect(() => {
-    console.log('Initializing Farcaster SDK...');
-    const initializeSDK = async () => {
-      try {
-        await frame.sdk.init();
-        console.log('SDK initialized successfully');
+    // Check if frame is initialized
+    const checkFrameInitialization = () => {
+      if (window.frameInitialized) {
         setIsSDKReady(true);
-      } catch (err) {
-        console.error('Failed to initialize SDK:', err);
-        setError('Failed to initialize Farcaster SDK');
+      } else if (window.frameError) {
+        setError(window.frameError);
       }
     };
 
-    initializeSDK();
+    // Initial check
+    checkFrameInitialization();
+
+    // Set up an interval to check periodically
+    const interval = setInterval(checkFrameInitialization, 1000);
+
+    // Cleanup
+    return () => clearInterval(interval);
   }, []);
 
   const handleMint = async () => {
