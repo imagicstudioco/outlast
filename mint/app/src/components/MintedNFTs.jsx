@@ -27,12 +27,38 @@ export function MintedNFTs() {
   useEffect(() => {
     // Initialize the SDK
     const initializeSDK = async () => {
+      console.log('Starting SDK initialization...');
       try {
+        console.log('Checking if frame.sdk exists:', !!frame.sdk);
+        if (!frame.sdk) {
+          throw new Error('Farcaster SDK not found');
+        }
+        
+        console.log('Attempting to initialize SDK...');
         await frame.sdk.init();
+        console.log('SDK initialized successfully');
+        
+        // Verify wallet provider
+        if (!frame.sdk.wallet) {
+          console.error('Wallet not available after initialization');
+          throw new Error('Wallet not available after initialization');
+        }
+        
+        if (!frame.sdk.wallet.ethProvider) {
+          console.error('ETH provider not available after initialization');
+          throw new Error('ETH provider not available after initialization');
+        }
+        
+        console.log('Wallet and ETH provider verified');
         setIsSDKReady(true);
       } catch (err) {
         console.error('Failed to initialize SDK:', err);
-        setError('Failed to initialize Farcaster SDK');
+        console.error('Error details:', {
+          name: err.name,
+          message: err.message,
+          stack: err.stack
+        });
+        setError(`Failed to initialize Farcaster SDK: ${err.message}`);
       }
     };
 
@@ -41,6 +67,12 @@ export function MintedNFTs() {
 
   const handleMint = async () => {
     console.log('Mint button clicked');
+    console.log('Current SDK state:', {
+      isSDKReady,
+      hasWallet: !!(frame.sdk && frame.sdk.wallet),
+      hasProvider: !!(frame.sdk && frame.sdk.wallet && frame.sdk.wallet.ethProvider)
+    });
+
     if (!isSDKReady) {
       console.log('SDK not ready, current state:', { isSDKReady });
       setError('SDK not ready');
@@ -56,6 +88,7 @@ export function MintedNFTs() {
         chain: base,
         transport: http(),
       });
+      console.log('Public client created successfully');
 
       // Check if wallet is available
       console.log('Checking wallet availability...');
