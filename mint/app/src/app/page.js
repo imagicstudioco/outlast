@@ -15,26 +15,7 @@ const contractABI = [
   parseAbiItem('function balanceOf(address owner) view returns (uint256)'),
 ];
 
-export const metadata = {
-  title: 'Outlast NFTs',
-  description: 'Mint one of the Outlast NFTs on Base',
-  other: {
-    'fc:frame': JSON.stringify({
-      version: "next",
-      imageUrl: `${process.env.NEXT_PUBLIC_APP_URL}/collection-banner.png`,
-      button: {
-        title: "Mint Yours Now!",
-        action: {
-          type: "launch_frame",
-          name: "Outlast NFTs",
-          url: `${process.env.NEXT_PUBLIC_APP_URL}`,
-          splashImageUrl: `${process.env.NEXT_PUBLIC_APP_URL}/collection.gif`,
-          splashBackgroundColor: "#010BFF"
-        }
-      }
-    })
-  }
-};
+
 
 export default function Page() {
   const [walletAddress, setWalletAddress] = useState(null);

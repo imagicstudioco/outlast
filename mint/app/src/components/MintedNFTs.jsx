@@ -112,16 +112,11 @@ export function MintedNFTs() {
     }
   };
 
-  const handleShareOnWarpcast = () => {
-    const targetText = `Just minted Outlast NFT #${mintedNFT.tokenId}!`;
-    const targetURL = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
-    const finalUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(targetText)}&embeds[]=${encodeURIComponent(targetURL)}`;
-    
-    try {
-      frame.sdk.actions.openUrl(finalUrl);
-    } catch (error) {
-      console.error('Failed to open URL:', error);
-    }
+  const handleShareOnWarpcast = async () => {
+    await sdk.actions.composeCast({
+      text: "I just minted an NFT so I can vote in the Outlast Game",
+      embeds: ["https://farcaster.xyz/~/mini-apps/launch?domain=outlast-nft-mint.vercel.app"]
+    });
   };
 
   const handleDismissModal = () => {
