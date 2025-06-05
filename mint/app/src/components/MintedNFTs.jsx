@@ -7,159 +7,175 @@ import { createPublicClient, http, parseAbiItem, parseEventLogs } from 'viem';
 import { base } from 'viem/chains';
 import * as frame from '@farcaster/frame-sdk';
 
-const CONTRACT_ADDRESS = '0x4c8574512C09f0dCa20A37aB24447a2e1C10f223';
+const CONTRACT_ADDRESS = '0x4a02d17aff1590b270bb631427d49cced8775033';
+const MINT_PRICE = '0.001';
 
 // ABI for the events we need
 const contractABI = [
   parseAbiItem('event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)'),
-  parseAbiItem('function tokenURI(uint256 tokenId) view returns (string)')
+  parseAbiItem('function tokenURI(uint256 tokenId) view returns (string)'),
+  parseAbiItem('function mint() payable')
 ];
 
-export function MintedNFTs({ txHash }) {
-  const [mintedNFTs, setMintedNFTs] = useState([]);
-  const [loading, setLoading] = useState(true);
+export function MintedNFTs() {
+  const [isMinting, setIsMinting] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [mintedNFT, setMintedNFT] = useState(null);
   const [error, setError] = useState(null);
 
-  const handleOpenUrl = (urlAsString) => {
+  const handleMint = async () => {
+    setIsMinting(true);
+    setError(null);
+
     try {
-      // Try with string parameter first
-      frame.sdk.actions.openUrl(urlAsString);
-    } catch (error) {
-      try {
-        // If string parameter fails, try with object parameter
-        frame.sdk.actions.openUrl({ url: urlAsString });
-      } catch (secondError) {
-        console.error('Failed to open URL:', secondError);
+      const client = createPublicClient({
+        chain: base,
+        transport: http(),
+      });
+
+      // Request wallet connection
+      const accounts = await frame.sdk.wallet.ethProvider.request({
+        method: 'eth_requestAccounts'
+      });
+
+      if (!accounts || !accounts[0]) {
+        throw new Error('No wallet connected');
       }
+
+      const walletAddress = accounts[0];
+
+      // Check and switch network if needed
+      const chainId = await frame.sdk.wallet.ethProvider.request({ method: 'eth_chainId' });
+      if (parseInt(chainId, 16) !== 8453) {
+        await frame.sdk.wallet.ethProvider.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: '0x2105' }]
+        });
+      }
+
+      // Prepare mint transaction
+      const { request } = await client.simulateContract({
+        address: CONTRACT_ADDRESS,
+        abi: contractABI,
+        functionName: 'mint',
+        value: BigInt(parseFloat(MINT_PRICE) * 1e18),
+        account: walletAddress,
+      });
+
+      // Send transaction
+      const hash = await frame.sdk.wallet.ethProvider.request({
+        method: 'eth_sendTransaction',
+        params: [request],
+      });
+
+      // Wait for transaction
+      const receipt = await client.waitForTransactionReceipt({ hash });
+
+      // Get minted token ID from Transfer event
+      const transferEvent = receipt.logs
+        .filter(log => log.address.toLowerCase() === CONTRACT_ADDRESS.toLowerCase())
+        .map(log => {
+          const parsedLog = parseEventLogs({
+            abi: contractABI,
+            logs: [log],
+          })[0];
+          return parsedLog.args;
+        })
+        .find(args => args.from === '0x0000000000000000000000000000000000000000');
+
+      if (transferEvent) {
+        const tokenId = transferEvent.tokenId;
+        const metadataUri = await client.readContract({
+          address: CONTRACT_ADDRESS,
+          abi: contractABI,
+          functionName: 'tokenURI',
+          args: [tokenId],
+        });
+
+        // Fetch metadata
+        const metadataResponse = await fetch(metadataUri.replace('ipfs://', 'https://ipfs.io/ipfs/'));
+        const metadata = await metadataResponse.json();
+
+        setMintedNFT({
+          tokenId: tokenId.toString(),
+          imageUrl: metadata.image.replace('ipfs://', 'https://ipfs.io/ipfs/'),
+          name: metadata.name || `NFT #${tokenId}`,
+        });
+
+        setShowSuccessModal(true);
+      }
+    } catch (err) {
+      console.error('Error minting NFT:', err);
+      setError(err.message);
+    } finally {
+      setIsMinting(false);
     }
   };
 
   const handleShareOnWarpcast = () => {
-    const targetText = mintedNFTs.length > 1 
-      ? `Just minted ${mintedNFTs.length} Farcaster Interns NFTs, a free mint for Farcaster Pro subscribers!` 
-      : `Just minted Farcaster Intern #${mintedNFTs[0].tokenId}, a free mint for Farcaster Pro subscribers!`;
+    const targetText = `Just minted Outlast NFT #${mintedNFT.tokenId}!`;
     const targetURL = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
     const finalUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(targetText)}&embeds[]=${encodeURIComponent(targetURL)}`;
-    handleOpenUrl(finalUrl);
+    
+    try {
+      frame.sdk.actions.openUrl(finalUrl);
+    } catch (error) {
+      console.error('Failed to open URL:', error);
+    }
   };
 
-  useEffect(() => {
-    if (!txHash) return;
-
-    async function fetchMintedNFTs() {
-      setLoading(true);
-      setError(null);
-      try {
-        const client = createPublicClient({
-          chain: base,
-          transport: http(),
-        });
-
-        const receipt = await client.waitForTransactionReceipt({ hash: txHash });
-        
-        const transferEvents = receipt.logs
-          .filter(log => log.address.toLowerCase() === CONTRACT_ADDRESS.toLowerCase())
-          .map(log => {
-            const parsedLog = parseEventLogs({
-              abi: contractABI,
-              logs: [log],
-            })[0];
-            return parsedLog.args;
-          })
-          .filter(args => args.from === '0x0000000000000000000000000000000000000000');
-
-        const nftPromises = transferEvents.map(async (event) => {
-          const tokenId = event.tokenId;
-          const metadataUri = await client.readContract({
-            address: CONTRACT_ADDRESS,
-            abi: contractABI,
-            functionName: 'tokenURI',
-            args: [tokenId],
-          });
-
-          // Fetch the JSON metadata
-          const metadataResponse = await fetch(metadataUri.replace('ipfs://', 'https://ipfs.io/ipfs/'));
-          if (!metadataResponse.ok) {
-            throw new Error(`Failed to fetch metadata for token ${tokenId} from ${metadataUri}`);
-          }
-          const metadata = await metadataResponse.json();
-
-          // Extract image URL and attributes
-          const imageUrl = metadata.image ? metadata.image.replace('ipfs://', 'https://ipfs.io/ipfs/') : '';
-          const attributes = metadata.attributes ? metadata.attributes.filter(attr => attr.value !== 'None' && attr.value !== null && attr.value !== '') : [];
-          
-          return {
-            tokenId: tokenId.toString(),
-            imageUrl,
-            name: metadata.name || `NFT #${tokenId}`,
-            attributes,
-          };
-        });
-
-        const nfts = await Promise.all(nftPromises);
-        setMintedNFTs(nfts);
-      } catch (err) {
-        console.error('Error fetching minted NFTs:', err);
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchMintedNFTs();
-  }, [txHash]);
-
-  if (loading) {
-    return <div className={styles.loading}>Loading your minted NFTs...</div>;
-  }
-
-  if (error) {
-    return <div className={styles.error}>Error: {error}</div>;
-  }
-
-  if (mintedNFTs.length === 0) {
-    return null;
-  }
+  const handleDismissModal = () => {
+    setShowSuccessModal(false);
+    setMintedNFT(null);
+  };
 
   return (
     <div className={styles.container}>
-      <h2>Your Minted NFTs</h2>
-      <div className={`${styles.grid} ${mintedNFTs.length === 1 ? styles.single : ''}`}>
-        {mintedNFTs.map((nft) => (
-          <div key={nft.tokenId} className={styles.nftCard}>
-            {nft.imageUrl && (
+      <button 
+        className={styles.mintButton} 
+        onClick={handleMint}
+        disabled={isMinting}
+      >
+        {isMinting ? 'Minting...' : `Mint - ${MINT_PRICE} ETH`}
+      </button>
+
+      {error && (
+        <div className={styles.error}>
+          Error: {error}
+        </div>
+      )}
+
+      {showSuccessModal && mintedNFT && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modal}>
+            <h2>Mint Successful!</h2>
+            <div className={styles.nftPreview}>
               <Image
-                src={nft.imageUrl}
-                alt={nft.name || `NFT #${nft.tokenId}`}
-                width={mintedNFTs.length === 1 ? 400 : 250}
-                height={mintedNFTs.length === 1 ? 400 : 250}
+                src={mintedNFT.imageUrl}
+                alt={mintedNFT.name}
+                width={300}
+                height={300}
                 className={styles.nftImage}
                 unoptimized={true}
               />
-            )}
-            <h3 className={styles.nftName}>{nft.name}</h3>
-            {nft.attributes && nft.attributes.length > 0 && (
-              <div className={styles.attributesContainer}>
-                <h4>Traits:</h4>
-                <ul className={styles.attributesList}>
-                  {nft.attributes.map((attr, index) => (
-                    <li key={index} className={styles.attributeItem}>
-                      <span className={styles.traitType}>{attr.trait_type}:</span> {attr.value}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+              <h3>{mintedNFT.name}</h3>
+            </div>
+            <div className={styles.modalButtons}>
+              <button 
+                className={styles.shareButton}
+                onClick={handleShareOnWarpcast}
+              >
+                Share on Farcaster
+              </button>
+              <button 
+                className={styles.dismissButton}
+                onClick={handleDismissModal}
+              >
+                Dismiss
+              </button>
+            </div>
           </div>
-        ))}
-      </div>
-      {mintedNFTs.length > 0 && (
-        <button 
-          className={styles.shareButton} 
-          onClick={handleShareOnWarpcast}
-        >
-          Share
-        </button>
+        </div>
       )}
     </div>
   );

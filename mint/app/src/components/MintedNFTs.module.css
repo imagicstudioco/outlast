@@ -1,8 +1,12 @@
 .container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
   width: 100%;
-  max-width: 1200px;
-  margin: 2rem auto;
-  padding: 0 1rem;
+  max-width: 600px;
+  margin: 0 auto;
 }
 
 .container h2 {
@@ -46,7 +50,7 @@
 }
 
 .nftImage {
-  border-radius: var(--radius-md);
+  border-radius: 12px;
   object-fit: cover;
 }
 
@@ -63,12 +67,12 @@
 }
 
 .error {
+  color: #ef4444;
+  background-color: #fee2e2;
+  padding: 1rem;
+  border-radius: 8px;
+  width: 100%;
   text-align: center;
-  padding: 2rem;
-  color: var(--error);
-  background: var(--error-bg);
-  border-radius: var(--radius-md);
-  margin: 1rem 0;
 }
 
 .shareButton {
@@ -142,4 +146,110 @@
   font-weight: 600;
   color: var(--text-secondary);
   margin-right: var(--spacing-xs);
+}
+
+.mintButton {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 1rem 2rem;
+  font-size: 1.2rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+  max-width: 300px;
+}
+
+.mintButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.mintButton:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal {
+  background: white;
+  border-radius: 16px;
+  padding: 2rem;
+  width: 90%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+.modal h2 {
+  color: #1f2937;
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.nftPreview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.nftPreview h3 {
+  color: #4b5563;
+  font-size: 1.2rem;
+  margin: 0;
+}
+
+.modalButtons {
+  display: flex;
+  gap: 1rem;
+  width: 100%;
+}
+
+.shareButton, .dismissButton {
+  flex: 1;
+  padding: 0.75rem;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.shareButton {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  color: white;
+  border: none;
+}
+
+.dismissButton {
+  background: #f3f4f6;
+  color: #4b5563;
+  border: 1px solid #e5e7eb;
+}
+
+.shareButton:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.dismissButton:hover {
+  background: #e5e7eb;
 } 
