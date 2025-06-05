@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import styles from "./page.module.css";
 import { CollectionDisplay } from "@/components/CollectionDisplay";
-import { MintedNFTs } from "@/components/MintedNFTs";
+import { MintForm } from "@/components/MintForm";
 import { createPublicClient, http, parseAbiItem } from 'viem';
 import { base } from 'viem/chains';
 import * as frame from '@farcaster/frame-sdk';
@@ -119,7 +119,7 @@ export default function Page() {
             <p>Thank you for being part of our community.</p>
           </div>
         ) : (
-          <MintedNFTs />
+          <MintForm />
         )}
       </main>
     </div>
