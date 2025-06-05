@@ -7,7 +7,7 @@ import { createPublicClient, http, parseAbiItem, parseEventLogs, encodeFunctionD
 import { base } from 'viem/chains';
 import * as frame from '@farcaster/frame-sdk';
 
-const CONTRACT_ADDRESS = '0x4a02d17aff1590b270bb631427d49cced8775033';
+const CONTRACT_ADDRESS = '0x9F4F7b2AcFF63C12D1FFa98feB16f9Fdcc529113';
 const MINT_PRICE = '0.001';
 
 // ABI for the events we need
