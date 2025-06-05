@@ -7,7 +7,7 @@ import { createPublicClient, http, parseAbiItem, parseEventLogs, encodeFunctionD
 import { base } from 'viem/chains';
 import * as frame from '@farcaster/frame-sdk';
 
-const CONTRACT_ADDRESS = '0x9F4F7b2AcFF63C12D1FFa98feB16f9Fdcc529113';
+const CONTRACT_ADDRESS = '0x4a02d17aff1590b270bb631427d49cced8775033';
 const MINT_PRICE = '0.001';
 
 // ABI for the events we need
@@ -23,69 +23,25 @@ export function MintForm() {
   const [isSDKReady, setIsSDKReady] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [mintedNFT, setMintedNFT] = useState(null);
-  const [isInitializing, setIsInitializing] = useState(true);
 
   useEffect(() => {
-    // Initialize Frame SDK
-    const initializeFrame = async () => {
-      try {
-        console.log('Starting Frame SDK initialization...');
-        setIsInitializing(true);
-        
-        // Check if we're in a Frame environment
-        if (typeof window === 'undefined') {
-          throw new Error('Window is not defined');
-        }
-
-        // Wait for Frame to be ready
-        let attempts = 0;
-        const maxAttempts = 10;
-        
-        while (!window.frameInitialized && attempts < maxAttempts) {
-          console.log(`Waiting for Frame initialization... Attempt ${attempts + 1}/${maxAttempts}`);
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          attempts++;
-        }
-
-        if (!window.frameInitialized) {
-          throw new Error('Frame initialization timeout');
-        }
-
-        console.log('Frame environment detected, initializing SDK...');
-        
-        // Initialize the SDK
-        if (!frame.sdk) {
-          throw new Error('Frame SDK not found');
-        }
-
-        await frame.sdk.initialize();
-        console.log('Frame SDK initialized successfully');
+    // Check if frame is initialized
+    const checkFrameInitialization = () => {
+      if (window.frameInitialized) {
         setIsSDKReady(true);
-        setError(null);
-      } catch (initError) {
-        console.error('Error during Frame SDK initialization:', initError);
-        let errorMessage = 'Failed to initialize Frame SDK';
-        
-        if (initError.message.includes('timeout')) {
-          errorMessage = 'Please open this page in Frame';
-        } else if (initError.message.includes('not found')) {
-          errorMessage = 'Frame SDK not found. Please make sure you are using the latest version of Frame';
-        }
-        
-        setError(errorMessage);
-        setIsSDKReady(false);
-      } finally {
-        setIsInitializing(false);
+      } else if (window.frameError) {
+        setError(window.frameError);
       }
     };
 
-    initializeFrame();
+    // Initial check
+    checkFrameInitialization();
+
+    // Set up an interval to check periodically
+    const interval = setInterval(checkFrameInitialization, 1000);
 
     // Cleanup
-    return () => {
-      setIsSDKReady(false);
-      setIsInitializing(false);
-    };
+    return () => clearInterval(interval);
   }, []);
 
   const handleShareOnWarpcast = async () => {
@@ -115,7 +71,7 @@ export function MintForm() {
     console.log('Mint button clicked');
     if (!isSDKReady) {
       console.log('SDK not ready');
-      setError('Please open this page in Frame to mint');
+      setError('SDK not ready');
       return;
     }
 
@@ -129,31 +85,18 @@ export function MintForm() {
         transport: http(),
       });
 
-      // Check if frame SDK and wallet are available
-      console.log('Checking Frame SDK and wallet availability...');
-      if (!frame.sdk) {
-        throw new Error('Frame SDK not initialized');
-      }
-
-      if (!frame.sdk.wallet) {
-        throw new Error('Frame wallet not available');
-      }
-
-      if (!frame.sdk.wallet.ethProvider) {
-        throw new Error('Frame wallet provider not available');
+      // Check if wallet is available
+      console.log('Checking wallet availability...');
+      if (!frame.sdk.wallet || !frame.sdk.wallet.ethProvider) {
+        console.error('Wallet not available');
+        throw new Error('Wallet not available');
       }
 
       // Request wallet connection
       console.log('Requesting wallet connection...');
-      let accounts;
-      try {
-        accounts = await frame.sdk.wallet.ethProvider.request({
-          method: 'eth_requestAccounts'
-        });
-      } catch (requestError) {
-        console.error('Error requesting accounts:', requestError);
-        throw new Error('Failed to connect wallet');
-      }
+      const accounts = await frame.sdk.wallet.ethProvider.request({
+        method: 'eth_requestAccounts'
+      });
 
       console.log('Wallet accounts:', accounts);
 
@@ -285,79 +228,149 @@ export function MintForm() {
             }
           } catch (parseError) {
             console.warn('Error parsing log:', parseError);
+            continue;
           }
         }
       }
 
-      // Show success modal
-      setMintedNFT({
-        tokenId: tokenId ? tokenId.toString() : 'Unknown',
-        txHash: txHash
-      });
+      if (!tokenId) {
+        // Fallback: try to get the latest token from the contract
+        console.warn('Could not find token ID in logs, showing success anyway');
+        setMintedNFT({
+          tokenId: 'Unknown',
+          imageUrl: null,
+          name: 'NFT Minted Successfully',
+        });
+        setShowSuccessModal(true);
+        return;
+      }
+
+      console.log('Found minted token ID:', tokenId.toString());
+
+      // Try to fetch metadata
+      try {
+        const metadataUri = await client.readContract({
+          address: CONTRACT_ADDRESS,
+          abi: contractABI,
+          functionName: 'tokenURI',
+          args: [tokenId],
+        });
+
+        console.log('Metadata URI:', metadataUri);
+
+        if (metadataUri) {
+          const ipfsUrl = metadataUri.replace('ipfs://', 'https://ipfs.io/ipfs/');
+          const metadataResponse = await fetch(ipfsUrl);
+          
+          if (metadataResponse.ok) {
+            const metadata = await metadataResponse.json();
+            
+            setMintedNFT({
+              tokenId: tokenId.toString(),
+              imageUrl: metadata.image ? metadata.image.replace('ipfs://', 'https://ipfs.io/ipfs/') : null,
+              name: metadata.name || `NFT #${tokenId}`,
+            });
+          } else {
+            throw new Error('Failed to fetch metadata');
+          }
+        } else {
+          throw new Error('No metadata URI returned');
+        }
+      } catch (metadataError) {
+        console.warn('Could not fetch metadata:', metadataError);
+        setMintedNFT({
+          tokenId: tokenId.toString(),
+          imageUrl: null,
+          name: `NFT #${tokenId}`,
+        });
+      }
+
       setShowSuccessModal(true);
+
     } catch (err) {
-      console.error('Error during mint:', err);
-      setError(err.message || 'Failed to mint NFT');
+      console.error('Error minting NFT:', err);
+      
+      let errorMessage = 'An error occurred while minting';
+      
+      if (err.message) {
+        errorMessage = err.message;
+      } else if (err.code === 4001) {
+        errorMessage = 'Transaction was rejected by user';
+      } else if (err.code === -32603) {
+        errorMessage = 'Transaction failed - insufficient funds or contract error';
+      }
+      
+      setError(errorMessage);
     } finally {
       setIsMinting(false);
     }
   };
 
+  if (!isSDKReady) {
+    return (
+      <div className={styles.mintForm}>
+        <div>Initializing...</div>
+      </div>
+    );
+  }
+
   return (
-    <div className={styles.container}>
-      {isInitializing ? (
-        <div className={styles.loadingContainer}>
-          <div className={styles.loadingText}>Initializing...</div>
+    <div className={styles.mintForm}>
+      <button 
+        className={styles.mintButton} 
+        onClick={handleMint}
+        disabled={isMinting}
+      >
+        {isMinting ? 'Minting...' : `Mint - ${MINT_PRICE} ETH`}
+      </button>
+
+      {error && (
+        <div className={styles.error}>
+          Error: {error}
         </div>
-      ) : error ? (
-        <div className={styles.errorContainer}>
-          <div className={styles.errorText}>{error}</div>
-        </div>
-      ) : (
-        <>
-          <div className={styles.formContainer}>
-            <div className={styles.imageContainer}>
-              <Image
-                src="/nft-preview.png"
-                alt="NFT Preview"
-                width={300}
-                height={300}
-                className={styles.nftImage}
-              />
+      )}
+
+      {showSuccessModal && mintedNFT && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modal}>
+            <h2>Mint Successful!</h2>
+            <div className={styles.nftPreview}>
+              {mintedNFT.imageUrl ? (
+                <Image
+                  src={mintedNFT.imageUrl}
+                  alt={mintedNFT.name}
+                  width={300}
+                  height={300}
+                  className={styles.nftImage}
+                  unoptimized={true}
+                />
+              ) : (
+                <div className={styles.placeholderImage}>
+                  No Image Available
+                </div>
+              )}
+              <h3>{mintedNFT.name}</h3>
+              {mintedNFT.tokenId !== 'Unknown' && (
+                <p>Token ID: {mintedNFT.tokenId}</p>
+              )}
             </div>
-            <div className={styles.mintInfo}>
-              <h2>Mint Your NFT</h2>
-              <p>Price: {MINT_PRICE} ETH</p>
-              <button
-                className={styles.mintButton}
-                onClick={handleMint}
-                disabled={isMinting || !isSDKReady}
+            <div className={styles.modalButtons}>
+              <button 
+                className={styles.shareButton}
+                onClick={handleShareOnWarpcast}
               >
-                {isMinting ? 'Minting...' : 'Mint NFT'}
+                Share on Farcaster
+              </button>
+              <button 
+                className={styles.dismissButton}
+                onClick={handleDismissModal}
+              >
+                Dismiss
               </button>
             </div>
           </div>
-          {showSuccessModal && (
-            <div className={styles.modalOverlay}>
-              <div className={styles.modalContent}>
-                <h3>Successfully Minted!</h3>
-                {mintedNFT && (
-                  <div className={styles.mintedNFTInfo}>
-                    <p>Token ID: {mintedNFT.tokenId}</p>
-                    <p>View on Explorer: <a href={`https://basescan.org/token/${CONTRACT_ADDRESS}?a=${mintedNFT.tokenId}`} target="_blank" rel="noopener noreferrer">View NFT</a></p>
-                  </div>
-                )}
-                <button onClick={handleShareOnWarpcast} className={styles.shareButton}>
-                  Share on Warpcast
-                </button>
-                <button onClick={handleDismissModal} className={styles.dismissButton}>
-                  Close
-                </button>
-              </div>
-            </div>
-          )}
-        </>
+        </div>
       )}
     </div>
   );
-} 
+}
