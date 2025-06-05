@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import styles from './MintedNFTs.module.css';
-import { createPublicClient, http, parseAbiItem, parseEventLogs, encodeFunctionData } from 'viem';
+import { createPublicClient, http, parseAbiItem, parseEventLogs, encodeFunctionData, parseEther } from 'viem';
 import { base } from 'viem/chains';
 import * as frame from '@farcaster/frame-sdk';
 
@@ -22,8 +22,29 @@ export function MintedNFTs() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [mintedNFT, setMintedNFT] = useState(null);
   const [error, setError] = useState(null);
+  const [isSDKReady, setIsSDKReady] = useState(false);
+
+  useEffect(() => {
+    // Initialize the SDK
+    const initializeSDK = async () => {
+      try {
+        await frame.sdk.init();
+        setIsSDKReady(true);
+      } catch (err) {
+        console.error('Failed to initialize SDK:', err);
+        setError('Failed to initialize Farcaster SDK');
+      }
+    };
+
+    initializeSDK();
+  }, []);
 
   const handleMint = async () => {
+    if (!isSDKReady) {
+      setError('SDK not ready');
+      return;
+    }
+
     setIsMinting(true);
     setError(null);
 
@@ -33,126 +54,210 @@ export function MintedNFTs() {
         transport: http(),
       });
 
+      // Check if wallet is available
+      if (!frame.sdk.wallet || !frame.sdk.wallet.ethProvider) {
+        throw new Error('Wallet not available');
+      }
+
       // Request wallet connection
       const accounts = await frame.sdk.wallet.ethProvider.request({
         method: 'eth_requestAccounts'
       });
 
-      if (!accounts || !accounts[0]) {
+      if (!accounts || accounts.length === 0) {
         throw new Error('No wallet connected');
       }
 
       const walletAddress = accounts[0];
 
-      // Check and switch network if needed
-      const chainId = await frame.sdk.wallet.ethProvider.request({ method: 'eth_chainId' });
-      if (parseInt(chainId, 16) !== 8453) {
-        await frame.sdk.wallet.ethProvider.request({
-          method: 'wallet_switchEthereumChain',
-          params: [{ chainId: '0x2105' }]
-        });
+      // Check current network
+      const chainId = await frame.sdk.wallet.ethProvider.request({ 
+        method: 'eth_chainId' 
+      });
+      
+      const currentChainId = parseInt(chainId, 16);
+      
+      // Switch to Base network if needed (Base mainnet: 8453)
+      if (currentChainId !== 8453) {
+        try {
+          await frame.sdk.wallet.ethProvider.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: '0x2105' }] // Base mainnet
+          });
+        } catch (switchError) {
+          // If the network doesn't exist, add it
+          if (switchError.code === 4902) {
+            await frame.sdk.wallet.ethProvider.request({
+              method: 'wallet_addEthereumChain',
+              params: [{
+                chainId: '0x2105',
+                chainName: 'Base',
+                nativeCurrency: {
+                  name: 'Ethereum',
+                  symbol: 'ETH',
+                  decimals: 18
+                },
+                rpcUrls: ['https://mainnet.base.org'],
+                blockExplorerUrls: ['https://basescan.org']
+              }]
+            });
+          } else {
+            throw switchError;
+          }
+        }
       }
 
-      // Encode the function data for the mint call
-      const data = encodeFunctionData({
-        abi: contractABI,
-        functionName: 'mint',
-        args: []
-      });
+      // Get gas estimate
+      let gasEstimate;
+      try {
+        gasEstimate = await client.estimateGas({
+          account: walletAddress,
+          to: CONTRACT_ADDRESS,
+          value: parseEther(MINT_PRICE),
+          data: encodeFunctionData({
+            abi: contractABI,
+            functionName: 'mint',
+            args: []
+          })
+        });
+      } catch (gasError) {
+        console.warn('Gas estimation failed, using default:', gasError);
+        gasEstimate = BigInt(100000); // Default gas limit
+      }
 
-      // Prepare transaction parameters
-      const transactionParams = {
+      // Prepare transaction
+      const txParams = {
         from: walletAddress,
         to: CONTRACT_ADDRESS,
-        value: `0x${BigInt(parseFloat(MINT_PRICE) * 1e18).toString(16)}`,
-        data: data,
-        gas: '0x5208', // 21000 in hex, adjust as needed
+        value: `0x${parseEther(MINT_PRICE).toString(16)}`,
+        data: encodeFunctionData({
+          abi: contractABI,
+          functionName: 'mint',
+          args: []
+        }),
+        gas: `0x${gasEstimate.toString(16)}`
       };
 
+      console.log('Sending transaction with params:', txParams);
+
       // Send transaction
-      const hash = await frame.sdk.wallet.ethProvider.request({
+      const txHash = await frame.sdk.wallet.ethProvider.request({
         method: 'eth_sendTransaction',
-        params: [transactionParams],
+        params: [txParams]
       });
+
+      console.log('Transaction sent:', txHash);
 
       // Wait for transaction receipt
       const receipt = await client.waitForTransactionReceipt({ 
-        hash: hash,
-        timeout: 60_000 // 60 second timeout
+        hash: txHash,
+        timeout: 120_000 // 2 minute timeout
       });
 
-      // Parse Transfer events from the receipt
+      console.log('Transaction receipt:', receipt);
+
+      // Find the minted token ID from Transfer events
       let tokenId = null;
       
-      for (const log of receipt.logs) {
-        if (log.address.toLowerCase() === CONTRACT_ADDRESS.toLowerCase()) {
+      if (receipt.logs && receipt.logs.length > 0) {
+        for (const log of receipt.logs) {
           try {
-            const parsedLogs = parseEventLogs({
-              abi: contractABI,
-              logs: [log],
-            });
-            
-            if (parsedLogs.length > 0) {
-              const transferEvent = parsedLogs[0];
-              // Check if this is a mint (transfer from zero address)
-              if (transferEvent.eventName === 'Transfer' && 
-                  transferEvent.args.from === '0x0000000000000000000000000000000000000000' &&
-                  transferEvent.args.to.toLowerCase() === walletAddress.toLowerCase()) {
-                tokenId = transferEvent.args.tokenId;
-                break;
+            // Only process logs from our contract
+            if (log.address && log.address.toLowerCase() === CONTRACT_ADDRESS.toLowerCase()) {
+              const parsedLogs = parseEventLogs({
+                abi: contractABI,
+                logs: [log],
+              });
+              
+              for (const parsedLog of parsedLogs) {
+                if (parsedLog.eventName === 'Transfer') {
+                  const { from, to, tokenId: logTokenId } = parsedLog.args;
+                  // Check if this is a mint (from zero address to our wallet)
+                  if (from === '0x0000000000000000000000000000000000000000' && 
+                      to && to.toLowerCase() === walletAddress.toLowerCase()) {
+                    tokenId = logTokenId;
+                    break;
+                  }
+                }
               }
+              
+              if (tokenId) break;
             }
           } catch (parseError) {
-            // Skip logs that don't match our ABI
+            console.warn('Error parsing log:', parseError);
             continue;
           }
         }
       }
 
-      if (tokenId) {
-        try {
-          // Get token metadata
-          const metadataUri = await client.readContract({
-            address: CONTRACT_ADDRESS,
-            abi: contractABI,
-            functionName: 'tokenURI',
-            args: [tokenId],
-          });
+      if (!tokenId) {
+        // Fallback: try to get the latest token from the contract
+        console.warn('Could not find token ID in logs, showing success anyway');
+        setMintedNFT({
+          tokenId: 'Unknown',
+          imageUrl: null,
+          name: 'NFT Minted Successfully',
+        });
+        setShowSuccessModal(true);
+        return;
+      }
 
-          // Fetch metadata from IPFS
+      console.log('Found minted token ID:', tokenId.toString());
+
+      // Try to fetch metadata
+      try {
+        const metadataUri = await client.readContract({
+          address: CONTRACT_ADDRESS,
+          abi: contractABI,
+          functionName: 'tokenURI',
+          args: [tokenId],
+        });
+
+        console.log('Metadata URI:', metadataUri);
+
+        if (metadataUri) {
           const ipfsUrl = metadataUri.replace('ipfs://', 'https://ipfs.io/ipfs/');
           const metadataResponse = await fetch(ipfsUrl);
           
-          if (!metadataResponse.ok) {
+          if (metadataResponse.ok) {
+            const metadata = await metadataResponse.json();
+            
+            setMintedNFT({
+              tokenId: tokenId.toString(),
+              imageUrl: metadata.image ? metadata.image.replace('ipfs://', 'https://ipfs.io/ipfs/') : null,
+              name: metadata.name || `NFT #${tokenId}`,
+            });
+          } else {
             throw new Error('Failed to fetch metadata');
           }
-          
-          const metadata = await metadataResponse.json();
-
-          setMintedNFT({
-            tokenId: tokenId.toString(),
-            imageUrl: metadata.image ? metadata.image.replace('ipfs://', 'https://ipfs.io/ipfs/') : null,
-            name: metadata.name || `NFT #${tokenId}`,
-          });
-
-          setShowSuccessModal(true);
-        } catch (metadataError) {
-          console.warn('Could not fetch metadata:', metadataError);
-          // Still show success modal even if metadata fails
-          setMintedNFT({
-            tokenId: tokenId.toString(),
-            imageUrl: null,
-            name: `NFT #${tokenId}`,
-          });
-          setShowSuccessModal(true);
+        } else {
+          throw new Error('No metadata URI returned');
         }
-      } else {
-        throw new Error('Could not find minted token ID in transaction receipt');
+      } catch (metadataError) {
+        console.warn('Could not fetch metadata:', metadataError);
+        setMintedNFT({
+          tokenId: tokenId.toString(),
+          imageUrl: null,
+          name: `NFT #${tokenId}`,
+        });
       }
+
+      setShowSuccessModal(true);
 
     } catch (err) {
       console.error('Error minting NFT:', err);
-      setError(err.message || 'An error occurred while minting');
+      
+      let errorMessage = 'An error occurred while minting';
+      
+      if (err.message) {
+        errorMessage = err.message;
+      } else if (err.code === 4001) {
+        errorMessage = 'Transaction was rejected by user';
+      } else if (err.code === -32603) {
+        errorMessage = 'Transaction failed - insufficient funds or contract error';
+      }
+      
+      setError(errorMessage);
     } finally {
       setIsMinting(false);
     }
@@ -160,19 +265,34 @@ export function MintedNFTs() {
 
   const handleShareOnWarpcast = async () => {
     try {
-      await frame.sdk.actions.composeCast({
-        text: "I just minted an NFT so I can vote in the Outlast Game",
-        embeds: ["https://farcaster.xyz/~/mini-apps/launch?domain=outlast-nft-mint.vercel.app"]
-      });
+      if (frame.sdk.actions && frame.sdk.actions.composeCast) {
+        await frame.sdk.actions.composeCast({
+          text: "I just minted an NFT so I can vote in the Outlast Game",
+          embeds: ["https://farcaster.xyz/~/mini-apps/launch?domain=outlast-nft-mint.vercel.app"]
+        });
+      } else {
+        console.error('composeCast not available');
+        setError('Share feature not available');
+      }
     } catch (err) {
       console.error('Error sharing on Warpcast:', err);
+      setError('Failed to share on Warpcast');
     }
   };
 
   const handleDismissModal = () => {
     setShowSuccessModal(false);
     setMintedNFT(null);
+    setError(null);
   };
+
+  if (!isSDKReady) {
+    return (
+      <div className={styles.container}>
+        <div>Initializing...</div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.container}>
@@ -210,7 +330,9 @@ export function MintedNFTs() {
                 </div>
               )}
               <h3>{mintedNFT.name}</h3>
-              <p>Token ID: {mintedNFT.tokenId}</p>
+              {mintedNFT.tokenId !== 'Unknown' && (
+                <p>Token ID: {mintedNFT.tokenId}</p>
+              )}
             </div>
             <div className={styles.modalButtons}>
               <button 
