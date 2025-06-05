@@ -3,12 +3,19 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import styles from './MintForm.module.css';
-import { createPublicClient, http, parseAbiItem, parseEventLogs, encodeFunctionData, parseEther } from 'viem';
+import { createPublicClient, http, parseAbiItem, parseEventLogs, encodeFunctionData, parseEther, createWalletClient, custom } from 'viem';
 import { base } from 'viem/chains';
 import * as frame from '@farcaster/frame-sdk';
+import { getDataSuffix, submitReferral } from '@divvi/referral-sdk';
 
 const CONTRACT_ADDRESS = '0x4a02d17aff1590b270bb631427d49cced8775033';
 const MINT_PRICE = '0.001';
+
+// Divvi configuration
+const DIVVI_CONFIG = {
+  consumer: '0xaF108Dd1aC530F1c4BdED13f43E336A9cec92B44',
+  providers: ['0x0423189886d7966f0dd7e7d256898daeee625dca','0xc95876688026be9d6fa7a7c33328bd013effa2bb'],
+};
 
 // ABI for the events we need
 const contractABI = [
@@ -148,7 +155,41 @@ export function MintForm() {
         }
       }
 
-      // Get gas estimate
+      // Prepare base transaction data
+      const baseTxData = encodeFunctionData({
+        abi: contractABI,
+        functionName: 'mint',
+        args: []
+      });
+
+      // DIVVI INTEGRATION: Get referral data suffix
+      let finalTxData = baseTxData;
+      let divviWalletClient = null;
+      
+      try {
+        console.log('Setting up Divvi referral tracking...');
+        
+        // Create wallet client for Divvi (using the same provider)
+        divviWalletClient = createWalletClient({
+          chain: base,
+          transport: custom(frame.sdk.wallet.ethProvider),
+        });
+
+        // Get referral data suffix
+        const dataSuffix = getDataSuffix({
+          consumer: DIVVI_CONFIG.consumer,
+          providers: DIVVI_CONFIG.providers,
+        });
+
+        // Append referral data to transaction data
+        finalTxData = baseTxData + dataSuffix;
+        console.log('Divvi referral data added to transaction');
+      } catch (divviError) {
+        console.warn('Divvi referral setup failed, proceeding without referral tracking:', divviError);
+        // Continue with original transaction data if Divvi fails
+      }
+
+      // Get gas estimate with final transaction data
       console.log('Estimating gas...');
       let gasEstimate;
       try {
@@ -156,11 +197,7 @@ export function MintForm() {
           account: walletAddress,
           to: CONTRACT_ADDRESS,
           value: parseEther(MINT_PRICE),
-          data: encodeFunctionData({
-            abi: contractABI,
-            functionName: 'mint',
-            args: []
-          })
+          data: finalTxData
         });
         console.log('Gas estimate:', gasEstimate.toString());
       } catch (gasError) {
@@ -168,17 +205,13 @@ export function MintForm() {
         gasEstimate = BigInt(100000); // Default gas limit
       }
 
-      // Prepare transaction
+      // Prepare transaction with Divvi data
       console.log('Preparing transaction...');
       const txParams = {
         from: walletAddress,
         to: CONTRACT_ADDRESS,
         value: `0x${parseEther(MINT_PRICE).toString(16)}`,
-        data: encodeFunctionData({
-          abi: contractABI,
-          functionName: 'mint',
-          args: []
-        }),
+        data: finalTxData,
         gas: `0x${gasEstimate.toString(16)}`
       };
 
@@ -189,6 +222,22 @@ export function MintForm() {
       });
 
       console.log('Transaction sent:', txHash);
+
+      // DIVVI INTEGRATION: Submit referral after transaction is sent
+      if (divviWalletClient) {
+        try {
+          console.log('Submitting referral to Divvi...');
+          const chainId = await divviWalletClient.getChainId();
+          await submitReferral({
+            txHash,
+            chainId,
+          });
+          console.log('Referral submitted to Divvi successfully');
+        } catch (divviSubmissionError) {
+          console.warn('Failed to submit referral to Divvi:', divviSubmissionError);
+          // Don't fail the entire transaction if Divvi submission fails
+        }
+      }
 
       // Wait for transaction receipt
       console.log('Waiting for transaction receipt...');
