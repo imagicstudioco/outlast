@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import styles from './MintedNFTs.module.css';
-import { createPublicClient, http, parseAbiItem, parseEventLogs } from 'viem';
+import { createPublicClient, http, parseAbiItem, parseEventLogs, encodeFunctionData } from 'viem';
 import { base } from 'viem/chains';
 import * as frame from '@farcaster/frame-sdk';
 
@@ -53,70 +53,120 @@ export function MintedNFTs() {
         });
       }
 
-      // Prepare mint transaction
-      const { request } = await client.simulateContract({
-        address: CONTRACT_ADDRESS,
+      // Encode the function data for the mint call
+      const data = encodeFunctionData({
         abi: contractABI,
         functionName: 'mint',
-        value: BigInt(parseFloat(MINT_PRICE) * 1e18),
-        account: walletAddress,
+        args: []
       });
+
+      // Prepare transaction parameters
+      const transactionParams = {
+        from: walletAddress,
+        to: CONTRACT_ADDRESS,
+        value: `0x${BigInt(parseFloat(MINT_PRICE) * 1e18).toString(16)}`,
+        data: data,
+        gas: '0x5208', // 21000 in hex, adjust as needed
+      };
 
       // Send transaction
       const hash = await frame.sdk.wallet.ethProvider.request({
         method: 'eth_sendTransaction',
-        params: [request],
+        params: [transactionParams],
       });
 
-      // Wait for transaction
-      const receipt = await client.waitForTransactionReceipt({ hash });
+      // Wait for transaction receipt
+      const receipt = await client.waitForTransactionReceipt({ 
+        hash: hash,
+        timeout: 60_000 // 60 second timeout
+      });
 
-      // Get minted token ID from Transfer event
-      const transferEvent = receipt.logs
-        .filter(log => log.address.toLowerCase() === CONTRACT_ADDRESS.toLowerCase())
-        .map(log => {
-          const parsedLog = parseEventLogs({
-            abi: contractABI,
-            logs: [log],
-          })[0];
-          return parsedLog.args;
-        })
-        .find(args => args.from === '0x0000000000000000000000000000000000000000');
-
-      if (transferEvent) {
-        const tokenId = transferEvent.tokenId;
-        const metadataUri = await client.readContract({
-          address: CONTRACT_ADDRESS,
-          abi: contractABI,
-          functionName: 'tokenURI',
-          args: [tokenId],
-        });
-
-        // Fetch metadata
-        const metadataResponse = await fetch(metadataUri.replace('ipfs://', 'https://ipfs.io/ipfs/'));
-        const metadata = await metadataResponse.json();
-
-        setMintedNFT({
-          tokenId: tokenId.toString(),
-          imageUrl: metadata.image.replace('ipfs://', 'https://ipfs.io/ipfs/'),
-          name: metadata.name || `NFT #${tokenId}`,
-        });
-
-        setShowSuccessModal(true);
+      // Parse Transfer events from the receipt
+      let tokenId = null;
+      
+      for (const log of receipt.logs) {
+        if (log.address.toLowerCase() === CONTRACT_ADDRESS.toLowerCase()) {
+          try {
+            const parsedLogs = parseEventLogs({
+              abi: contractABI,
+              logs: [log],
+            });
+            
+            if (parsedLogs.length > 0) {
+              const transferEvent = parsedLogs[0];
+              // Check if this is a mint (transfer from zero address)
+              if (transferEvent.eventName === 'Transfer' && 
+                  transferEvent.args.from === '0x0000000000000000000000000000000000000000' &&
+                  transferEvent.args.to.toLowerCase() === walletAddress.toLowerCase()) {
+                tokenId = transferEvent.args.tokenId;
+                break;
+              }
+            }
+          } catch (parseError) {
+            // Skip logs that don't match our ABI
+            continue;
+          }
+        }
       }
+
+      if (tokenId) {
+        try {
+          // Get token metadata
+          const metadataUri = await client.readContract({
+            address: CONTRACT_ADDRESS,
+            abi: contractABI,
+            functionName: 'tokenURI',
+            args: [tokenId],
+          });
+
+          // Fetch metadata from IPFS
+          const ipfsUrl = metadataUri.replace('ipfs://', 'https://ipfs.io/ipfs/');
+          const metadataResponse = await fetch(ipfsUrl);
+          
+          if (!metadataResponse.ok) {
+            throw new Error('Failed to fetch metadata');
+          }
+          
+          const metadata = await metadataResponse.json();
+
+          setMintedNFT({
+            tokenId: tokenId.toString(),
+            imageUrl: metadata.image ? metadata.image.replace('ipfs://', 'https://ipfs.io/ipfs/') : null,
+            name: metadata.name || `NFT #${tokenId}`,
+          });
+
+          setShowSuccessModal(true);
+        } catch (metadataError) {
+          console.warn('Could not fetch metadata:', metadataError);
+          // Still show success modal even if metadata fails
+          setMintedNFT({
+            tokenId: tokenId.toString(),
+            imageUrl: null,
+            name: `NFT #${tokenId}`,
+          });
+          setShowSuccessModal(true);
+        }
+      } else {
+        throw new Error('Could not find minted token ID in transaction receipt');
+      }
+
     } catch (err) {
       console.error('Error minting NFT:', err);
-      setError(err.message);
+      setError(err.message || 'An error occurred while minting');
     } finally {
       setIsMinting(false);
     }
   };
 
   const handleShareOnWarpcast = async () => {
-    await sdk.actions.composeCast({
-      text: "I just minted an NFT so I can vote in the Outlast Game",
-      embeds: ["https://farcaster.xyz/~/mini-apps/launch?domain=outlast-nft-mint.vercel.app"]
-    });
+    try {
+      await frame.sdk.actions.composeCast({
+        text: "I just minted an NFT so I can vote in the Outlast Game",
+        embeds: ["https://farcaster.xyz/~/mini-apps/launch?domain=outlast-nft-mint.vercel.app"]
+      });
+    } catch (err) {
+      console.error('Error sharing on Warpcast:', err);
+    }
   };
 
   const handleDismissModal = () => {
@@ -145,15 +195,22 @@ export function MintedNFTs() {
           <div className={styles.modal}>
             <h2>Mint Successful!</h2>
             <div className={styles.nftPreview}>
-              <Image
-                src={mintedNFT.imageUrl}
-                alt={mintedNFT.name}
-                width={300}
-                height={300}
-                className={styles.nftImage}
-                unoptimized={true}
-              />
+              {mintedNFT.imageUrl ? (
+                <Image
+                  src={mintedNFT.imageUrl}
+                  alt={mintedNFT.name}
+                  width={300}
+                  height={300}
+                  className={styles.nftImage}
+                  unoptimized={true}
+                />
+              ) : (
+                <div className={styles.placeholderImage}>
+                  No Image Available
+                </div>
+              )}
               <h3>{mintedNFT.name}</h3>
+              <p>Token ID: {mintedNFT.tokenId}</p>
             </div>
             <div className={styles.modalButtons}>
               <button 
@@ -174,4 +231,4 @@ export function MintedNFTs() {
       )}
     </div>
   );
-} 
+}
