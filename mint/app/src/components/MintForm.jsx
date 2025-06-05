@@ -32,16 +32,33 @@ export function MintForm() {
     // Initialize Frame SDK
     const initializeFrame = async () => {
       try {
-        console.log('Initializing Frame SDK...');
+        console.log('Starting Frame SDK initialization...');
         setIsInitializing(true);
         
         // Check if we're in a Frame environment
-        if (typeof window === 'undefined' || !window.frameInitialized) {
-          console.log('Not in Frame environment');
-          setError('Please open this page in Frame');
-          setIsSDKReady(false);
-          setIsInitializing(false);
-          return;
+        if (typeof window === 'undefined') {
+          throw new Error('Window is not defined');
+        }
+
+        // Wait for Frame to be ready
+        let attempts = 0;
+        const maxAttempts = 10;
+        
+        while (!window.frameInitialized && attempts < maxAttempts) {
+          console.log(`Waiting for Frame initialization... Attempt ${attempts + 1}/${maxAttempts}`);
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          attempts++;
+        }
+
+        if (!window.frameInitialized) {
+          throw new Error('Frame initialization timeout');
+        }
+
+        console.log('Frame environment detected, initializing SDK...');
+        
+        // Initialize the SDK
+        if (!frame.sdk) {
+          throw new Error('Frame SDK not found');
         }
 
         await frame.sdk.initialize();
@@ -49,8 +66,16 @@ export function MintForm() {
         setIsSDKReady(true);
         setError(null);
       } catch (initError) {
-        console.error('Error initializing Frame SDK:', initError);
-        setError('Failed to initialize Frame SDK');
+        console.error('Error during Frame SDK initialization:', initError);
+        let errorMessage = 'Failed to initialize Frame SDK';
+        
+        if (initError.message.includes('timeout')) {
+          errorMessage = 'Please open this page in Frame';
+        } else if (initError.message.includes('not found')) {
+          errorMessage = 'Frame SDK not found. Please make sure you are using the latest version of Frame';
+        }
+        
+        setError(errorMessage);
         setIsSDKReady(false);
       } finally {
         setIsInitializing(false);
