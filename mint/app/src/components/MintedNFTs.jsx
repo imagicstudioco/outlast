@@ -40,7 +40,9 @@ export function MintedNFTs() {
   }, []);
 
   const handleMint = async () => {
+    console.log('Mint button clicked');
     if (!isSDKReady) {
+      console.log('SDK not ready, current state:', { isSDKReady });
       setError('SDK not ready');
       return;
     }
@@ -49,20 +51,29 @@ export function MintedNFTs() {
     setError(null);
 
     try {
+      console.log('Creating public client...');
       const client = createPublicClient({
         chain: base,
         transport: http(),
       });
 
       // Check if wallet is available
+      console.log('Checking wallet availability...');
       if (!frame.sdk.wallet || !frame.sdk.wallet.ethProvider) {
+        console.error('Wallet not available:', { 
+          hasWallet: !!frame.sdk.wallet,
+          hasProvider: !!(frame.sdk.wallet && frame.sdk.wallet.ethProvider)
+        });
         throw new Error('Wallet not available');
       }
 
       // Request wallet connection
+      console.log('Requesting wallet connection...');
       const accounts = await frame.sdk.wallet.ethProvider.request({
         method: 'eth_requestAccounts'
       });
+
+      console.log('Wallet accounts:', accounts);
 
       if (!accounts || accounts.length === 0) {
         throw new Error('No wallet connected');

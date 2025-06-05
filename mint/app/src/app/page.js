@@ -95,8 +95,8 @@ export default function Page() {
   return (
     <div className={styles.container}>
       <main className={styles.main}>
-        <h1 className={styles.title}>Outlast NFTs</h1>
-        <p className={styles.subtitle}>Mint Outlast NFTs</p>
+        <h1 className={styles.title}>Outlast NFT</h1>
+        <p className={styles.subtitle}>Mint Outlast NFT</p>
         <CollectionDisplay />
         {hasNFT ? (
           <div className={styles.alreadyOwned}>
