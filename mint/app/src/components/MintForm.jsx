@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import styles from './MintForm.module.css';
 import { createPublicClient, http, parseAbiItem, parseEventLogs, encodeFunctionData, parseEther } from 'viem';
 import { base } from 'viem/chains';
@@ -20,6 +21,8 @@ export function MintForm() {
   const [isMinting, setIsMinting] = useState(false);
   const [error, setError] = useState(null);
   const [isSDKReady, setIsSDKReady] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [mintedNFT, setMintedNFT] = useState(null);
 
   useEffect(() => {
     // Check if frame is initialized
@@ -40,6 +43,29 @@ export function MintForm() {
     // Cleanup
     return () => clearInterval(interval);
   }, []);
+
+  const handleShareOnWarpcast = async () => {
+    try {
+      if (frame.sdk.actions && frame.sdk.actions.composeCast) {
+        await frame.sdk.actions.composeCast({
+          text: "I just minted an NFT so I can vote in the Outlast Game",
+          embeds: ["https://farcaster.xyz/~/mini-apps/launch?domain=outlast-nft-mint.vercel.app"]
+        });
+      } else {
+        console.error('composeCast not available');
+        setError('Share feature not available');
+      }
+    } catch (err) {
+      console.error('Error sharing on Warpcast:', err);
+      setError('Failed to share on Warpcast');
+    }
+  };
+
+  const handleDismissModal = () => {
+    setShowSuccessModal(false);
+    setMintedNFT(null);
+    setError(null);
+  };
 
   const handleMint = async () => {
     console.log('Mint button clicked');
@@ -172,7 +198,94 @@ export function MintForm() {
       });
 
       console.log('Transaction successful:', receipt);
-      alert('NFT minted successfully!');
+
+      // Find the minted token ID from Transfer events
+      let tokenId = null;
+      
+      if (receipt.logs && receipt.logs.length > 0) {
+        for (const log of receipt.logs) {
+          try {
+            // Only process logs from our contract
+            if (log.address && log.address.toLowerCase() === CONTRACT_ADDRESS.toLowerCase()) {
+              const parsedLogs = parseEventLogs({
+                abi: contractABI,
+                logs: [log],
+              });
+              
+              for (const parsedLog of parsedLogs) {
+                if (parsedLog.eventName === 'Transfer') {
+                  const { from, to, tokenId: logTokenId } = parsedLog.args;
+                  // Check if this is a mint (from zero address to our wallet)
+                  if (from === '0x0000000000000000000000000000000000000000' && 
+                      to && to.toLowerCase() === walletAddress.toLowerCase()) {
+                    tokenId = logTokenId;
+                    break;
+                  }
+                }
+              }
+              
+              if (tokenId) break;
+            }
+          } catch (parseError) {
+            console.warn('Error parsing log:', parseError);
+            continue;
+          }
+        }
+      }
+
+      if (!tokenId) {
+        // Fallback: try to get the latest token from the contract
+        console.warn('Could not find token ID in logs, showing success anyway');
+        setMintedNFT({
+          tokenId: 'Unknown',
+          imageUrl: null,
+          name: 'NFT Minted Successfully',
+        });
+        setShowSuccessModal(true);
+        return;
+      }
+
+      console.log('Found minted token ID:', tokenId.toString());
+
+      // Try to fetch metadata
+      try {
+        const metadataUri = await client.readContract({
+          address: CONTRACT_ADDRESS,
+          abi: contractABI,
+          functionName: 'tokenURI',
+          args: [tokenId],
+        });
+
+        console.log('Metadata URI:', metadataUri);
+
+        if (metadataUri) {
+          const ipfsUrl = metadataUri.replace('ipfs://', 'https://ipfs.io/ipfs/');
+          const metadataResponse = await fetch(ipfsUrl);
+          
+          if (metadataResponse.ok) {
+            const metadata = await metadataResponse.json();
+            
+            setMintedNFT({
+              tokenId: tokenId.toString(),
+              imageUrl: metadata.image ? metadata.image.replace('ipfs://', 'https://ipfs.io/ipfs/') : null,
+              name: metadata.name || `NFT #${tokenId}`,
+            });
+          } else {
+            throw new Error('Failed to fetch metadata');
+          }
+        } else {
+          throw new Error('No metadata URI returned');
+        }
+      } catch (metadataError) {
+        console.warn('Could not fetch metadata:', metadataError);
+        setMintedNFT({
+          tokenId: tokenId.toString(),
+          imageUrl: null,
+          name: `NFT #${tokenId}`,
+        });
+      }
+
+      setShowSuccessModal(true);
 
     } catch (err) {
       console.error('Error minting NFT:', err);
@@ -214,6 +327,48 @@ export function MintForm() {
       {error && (
         <div className={styles.error}>
           Error: {error}
+        </div>
+      )}
+
+      {showSuccessModal && mintedNFT && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modal}>
+            <h2>Mint Successful!</h2>
+            <div className={styles.nftPreview}>
+              {mintedNFT.imageUrl ? (
+                <Image
+                  src={mintedNFT.imageUrl}
+                  alt={mintedNFT.name}
+                  width={300}
+                  height={300}
+                  className={styles.nftImage}
+                  unoptimized={true}
+                />
+              ) : (
+                <div className={styles.placeholderImage}>
+                  No Image Available
+                </div>
+              )}
+              <h3>{mintedNFT.name}</h3>
+              {mintedNFT.tokenId !== 'Unknown' && (
+                <p>Token ID: {mintedNFT.tokenId}</p>
+              )}
+            </div>
+            <div className={styles.modalButtons}>
+              <button 
+                className={styles.shareButton}
+                onClick={handleShareOnWarpcast}
+              >
+                Share on Farcaster
+              </button>
+              <button 
+                className={styles.dismissButton}
+                onClick={handleDismissModal}
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

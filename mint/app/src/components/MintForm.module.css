@@ -115,6 +115,10 @@
   background-color: rgba(231, 76, 60, 0.1);
   color: #e74c3c;
   border: 1px solid #e74c3c;
+  padding: 1rem;
+  border-radius: 8px;
+  width: 100%;
+  text-align: center;
 }
 
 .linksContainer {
@@ -216,4 +220,101 @@
   background: rgba(255,255,255,0.08);
   color: var(--primary);
   border-color: var(--primary-dark);
+}
+
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal {
+  background: white;
+  border-radius: 16px;
+  padding: 2rem;
+  width: 90%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+.modal h2 {
+  color: #1f2937;
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.nftPreview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.nftPreview h3 {
+  color: #4b5563;
+  font-size: 1.2rem;
+  margin: 0;
+}
+
+.nftImage {
+  border-radius: 12px;
+  object-fit: cover;
+}
+
+.placeholderImage {
+  width: 300px;
+  height: 300px;
+  background-color: #f3f4f6;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+  font-size: 1rem;
+}
+
+.modalButtons {
+  display: flex;
+  gap: 1rem;
+  width: 100%;
+}
+
+.shareButton, .dismissButton {
+  flex: 1;
+  padding: 0.75rem;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.shareButton {
+  background-color: var(--primary);
+  color: white;
+  border: none;
+}
+
+.shareButton:hover {
+  background-color: var(--primary-dark);
+}
+
+.dismissButton {
+  background-color: #f3f4f6;
+  color: #4b5563;
+  border: 1px solid #e5e7eb;
+}
+
+.dismissButton:hover {
+  background-color: #e5e7eb;
 }
