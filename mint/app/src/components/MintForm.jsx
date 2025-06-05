@@ -28,23 +28,33 @@ export function MintForm() {
   const [mintedNFT, setMintedNFT] = useState(null);
 
   useEffect(() => {
-    // Check if frame is initialized
-    const checkFrameInitialization = () => {
-      if (window.frameInitialized) {
+    // Initialize Frame SDK
+    const initializeFrame = async () => {
+      try {
+        console.log('Initializing Frame SDK...');
+        await frame.sdk.initialize();
+        console.log('Frame SDK initialized successfully');
         setIsSDKReady(true);
-      } else if (window.frameError) {
-        setError(window.frameError);
+      } catch (initError) {
+        console.error('Error initializing Frame SDK:', initError);
+        setError('Failed to initialize Frame SDK');
+        setIsSDKReady(false);
       }
     };
 
-    // Initial check
-    checkFrameInitialization();
-
-    // Set up an interval to check periodically
-    const interval = setInterval(checkFrameInitialization, 1000);
+    // Check if we're in a Frame environment
+    if (typeof window !== 'undefined' && window.frameInitialized) {
+      initializeFrame();
+    } else {
+      console.log('Not in Frame environment');
+      setError('Please open this page in Frame');
+      setIsSDKReady(false);
+    }
 
     // Cleanup
-    return () => clearInterval(interval);
+    return () => {
+      setIsSDKReady(false);
+    };
   }, []);
 
   const handleShareOnWarpcast = async () => {
@@ -74,7 +84,7 @@ export function MintForm() {
     console.log('Mint button clicked');
     if (!isSDKReady) {
       console.log('SDK not ready');
-      setError('SDK not ready');
+      setError('Please open this page in Frame to mint');
       return;
     }
 
