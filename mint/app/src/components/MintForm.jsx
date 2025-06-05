@@ -26,34 +26,43 @@ export function MintForm() {
   const [isSDKReady, setIsSDKReady] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [mintedNFT, setMintedNFT] = useState(null);
+  const [isInitializing, setIsInitializing] = useState(true);
 
   useEffect(() => {
     // Initialize Frame SDK
     const initializeFrame = async () => {
       try {
         console.log('Initializing Frame SDK...');
+        setIsInitializing(true);
+        
+        // Check if we're in a Frame environment
+        if (typeof window === 'undefined' || !window.frameInitialized) {
+          console.log('Not in Frame environment');
+          setError('Please open this page in Frame');
+          setIsSDKReady(false);
+          setIsInitializing(false);
+          return;
+        }
+
         await frame.sdk.initialize();
         console.log('Frame SDK initialized successfully');
         setIsSDKReady(true);
+        setError(null);
       } catch (initError) {
         console.error('Error initializing Frame SDK:', initError);
         setError('Failed to initialize Frame SDK');
         setIsSDKReady(false);
+      } finally {
+        setIsInitializing(false);
       }
     };
 
-    // Check if we're in a Frame environment
-    if (typeof window !== 'undefined' && window.frameInitialized) {
-      initializeFrame();
-    } else {
-      console.log('Not in Frame environment');
-      setError('Please open this page in Frame');
-      setIsSDKReady(false);
-    }
+    initializeFrame();
 
     // Cleanup
     return () => {
       setIsSDKReady(false);
+      setIsInitializing(false);
     };
   }, []);
 
@@ -350,70 +359,60 @@ export function MintForm() {
     }
   };
 
-  if (!isSDKReady) {
-    return (
-      <div className={styles.mintForm}>
-        <div>Initializing...</div>
-      </div>
-    );
-  }
-
   return (
-    <div className={styles.mintForm}>
-      <button 
-        className={styles.mintButton} 
-        onClick={handleMint}
-        disabled={isMinting}
-      >
-        {isMinting ? 'Minting...' : `Mint - ${MINT_PRICE} ETH`}
-      </button>
-
-      {error && (
-        <div className={styles.error}>
-          Error: {error}
+    <div className={styles.container}>
+      {isInitializing ? (
+        <div className={styles.loadingContainer}>
+          <div className={styles.loadingText}>Initializing...</div>
         </div>
-      )}
-
-      {showSuccessModal && mintedNFT && (
-        <div className={styles.modalOverlay}>
-          <div className={styles.modal}>
-            <h2>Mint Successful!</h2>
-            <div className={styles.nftPreview}>
-              {mintedNFT.imageUrl ? (
-                <Image
-                  src={mintedNFT.imageUrl}
-                  alt={mintedNFT.name}
-                  width={300}
-                  height={300}
-                  className={styles.nftImage}
-                  unoptimized={true}
-                />
-              ) : (
-                <div className={styles.placeholderImage}>
-                  No Image Available
-                </div>
-              )}
-              <h3>{mintedNFT.name}</h3>
-              {mintedNFT.tokenId !== 'Unknown' && (
-                <p>Token ID: {mintedNFT.tokenId}</p>
-              )}
+      ) : error ? (
+        <div className={styles.errorContainer}>
+          <div className={styles.errorText}>{error}</div>
+        </div>
+      ) : (
+        <>
+          <div className={styles.formContainer}>
+            <div className={styles.imageContainer}>
+              <Image
+                src="/nft-preview.png"
+                alt="NFT Preview"
+                width={300}
+                height={300}
+                className={styles.nftImage}
+              />
             </div>
-            <div className={styles.modalButtons}>
-              <button 
-                className={styles.shareButton}
-                onClick={handleShareOnWarpcast}
+            <div className={styles.mintInfo}>
+              <h2>Mint Your NFT</h2>
+              <p>Price: {MINT_PRICE} ETH</p>
+              <button
+                className={styles.mintButton}
+                onClick={handleMint}
+                disabled={isMinting || !isSDKReady}
               >
-                Share on Farcaster
-              </button>
-              <button 
-                className={styles.dismissButton}
-                onClick={handleDismissModal}
-              >
-                Dismiss
+                {isMinting ? 'Minting...' : 'Mint NFT'}
               </button>
             </div>
           </div>
-        </div>
+          {showSuccessModal && (
+            <div className={styles.modalOverlay}>
+              <div className={styles.modalContent}>
+                <h3>Successfully Minted!</h3>
+                {mintedNFT && (
+                  <div className={styles.mintedNFTInfo}>
+                    <p>Token ID: {mintedNFT.tokenId}</p>
+                    <p>View on Explorer: <a href={`https://basescan.org/token/${CONTRACT_ADDRESS}?a=${mintedNFT.tokenId}`} target="_blank" rel="noopener noreferrer">View NFT</a></p>
+                  </div>
+                )}
+                <button onClick={handleShareOnWarpcast} className={styles.shareButton}>
+                  Share on Warpcast
+                </button>
+                <button onClick={handleDismissModal} className={styles.dismissButton}>
+                  Close
+                </button>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

@@ -1,10 +1,174 @@
-.mintForm {
+.container {
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.loadingContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 300px;
+}
+
+.loadingText {
+  font-size: 1.2rem;
+  color: #666;
+}
+
+.errorContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 300px;
+  background-color: #fff5f5;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.errorText {
+  color: #e53e3e;
+  font-size: 1.1rem;
+  text-align: center;
+}
+
+.formContainer {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--spacing-md);
+  gap: 20px;
+  background-color: white;
+  border-radius: 12px;
+  padding: 30px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.imageContainer {
+  width: 300px;
+  height: 300px;
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: #f7f7f7;
+}
+
+.nftImage {
   width: 100%;
-  max-width: 300px;
+  height: 100%;
+  object-fit: cover;
+}
+
+.mintInfo {
+  text-align: center;
+  width: 100%;
+}
+
+.mintInfo h2 {
+  margin: 0 0 10px 0;
+  color: #2d3748;
+}
+
+.mintInfo p {
+  color: #4a5568;
+  margin-bottom: 20px;
+}
+
+.mintButton {
+  background-color: #4299e1;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 6px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.mintButton:hover {
+  background-color: #3182ce;
+}
+
+.mintButton:disabled {
+  background-color: #a0aec0;
+  cursor: not-allowed;
+}
+
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modalContent {
+  background-color: white;
+  padding: 30px;
+  border-radius: 12px;
+  max-width: 500px;
+  width: 90%;
+  text-align: center;
+}
+
+.modalContent h3 {
+  margin: 0 0 20px 0;
+  color: #2d3748;
+}
+
+.mintedNFTInfo {
+  margin: 20px 0;
+  padding: 15px;
+  background-color: #f7fafc;
+  border-radius: 6px;
+}
+
+.mintedNFTInfo p {
+  margin: 10px 0;
+  color: #4a5568;
+}
+
+.mintedNFTInfo a {
+  color: #4299e1;
+  text-decoration: none;
+}
+
+.mintedNFTInfo a:hover {
+  text-decoration: underline;
+}
+
+.shareButton {
+  background-color: #4299e1;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  margin: 10px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.shareButton:hover {
+  background-color: #3182ce;
+}
+
+.dismissButton {
+  background-color: #e2e8f0;
+  color: #4a5568;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  margin: 10px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.dismissButton:hover {
+  background-color: #cbd5e0;
 }
 
 .quantitySelector {
@@ -66,28 +230,6 @@
   width: 100%;
   font-size: 0.8rem;
   color: var(--text-secondary);
-}
-
-.mintButton {
-  width: 100%;
-  padding: 12px 24px;
-  background-color: var(--primary);
-  color: var(--background);
-  border: none;
-  border-radius: 25px;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-}
-
-.mintButton:hover {
-  background-color: var(--primary-dark);
-}
-
-.mintButton:disabled {
-  background-color: var(--disabled);
-  cursor: not-allowed;
 }
 
 .statusMessage {
@@ -156,21 +298,23 @@
   margin: 2px;
 }
 
-.shareButton {
+.webMintButton {
   width: 100%;
   padding: 12px 24px;
-  background-color: rgba(241, 11, 145, 0.1);
-  color: var(--text-primary);
+  background: transparent;
+  color: var(--text-secondary);
   border: 2px solid var(--primary);
   border-radius: 25px;
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
+  margin-top: var(--spacing-xs);
 }
 
-.shareButton:hover {
-  background-color: rgba(134, 7, 107, 0.2);
+.webMintButton:hover {
+  background: rgba(255,255,255,0.08);
+  color: var(--primary);
   border-color: var(--primary-dark);
 }
 
@@ -200,76 +344,6 @@
 .mintTypeButton.active {
   background: var(--primary);
   color: var(--background);
-}
-
-.webMintButton {
-  width: 100%;
-  padding: 12px 24px;
-  background: transparent;
-  color: var(--text-secondary);
-  border: 2px solid var(--primary);
-  border-radius: 25px;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  margin-top: var(--spacing-xs);
-}
-
-.webMintButton:hover {
-  background: rgba(255,255,255,0.08);
-  color: var(--primary);
-  border-color: var(--primary-dark);
-}
-
-.modalOverlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.7);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.modal {
-  background: white;
-  border-radius: 16px;
-  padding: 2rem;
-  width: 90%;
-  max-width: 400px;
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  align-items: center;
-}
-
-.modal h2 {
-  color: #1f2937;
-  font-size: 1.5rem;
-  font-weight: 600;
-  margin: 0;
-}
-
-.nftPreview {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-}
-
-.nftPreview h3 {
-  color: #4b5563;
-  font-size: 1.2rem;
-  margin: 0;
-}
-
-.nftImage {
-  border-radius: 12px;
-  object-fit: cover;
 }
 
 .placeholderImage {
