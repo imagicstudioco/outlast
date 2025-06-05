@@ -6,9 +6,6 @@ import styles from './MintForm.module.css';
 import { createPublicClient, http, parseAbiItem, parseEventLogs, encodeFunctionData, parseEther } from 'viem';
 import { base } from 'viem/chains';
 import * as frame from '@farcaster/frame-sdk';
-import { getDataSuffix, submitReferral } from '@divvi/referral-sdk';
-import { createWalletClient, custom } from 'viem';
-import { mainnet } from 'viem/chains';
 
 const CONTRACT_ADDRESS = '0x9F4F7b2AcFF63C12D1FFa98feB16f9Fdcc529113';
 const MINT_PRICE = '0.001';
@@ -166,18 +163,6 @@ export function MintForm() {
 
       const walletAddress = accounts[0];
 
-      // Create wallet client for Divvi referral
-      const walletClient = createWalletClient({
-        chain: mainnet,
-        transport: custom(window.ethereum),
-      });
-
-      // Get Divvi referral data suffix
-      const dataSuffix = getDataSuffix({
-        consumer: '0xaF108Dd1aC530F1c4BdED13f43E336A9cec92B44',
-        providers: ['0x0423189886d7966f0dd7e7d256898daeee625dca','0xc95876688026be9d6fa7a7c33328bd013effa2bb'],
-      });
-
       // Check current network
       console.log('Checking network...');
       const chainId = await frame.sdk.wallet.ethProvider.request({ 
@@ -232,7 +217,7 @@ export function MintForm() {
             abi: contractABI,
             functionName: 'mint',
             args: []
-          }) + dataSuffix // Add Divvi data suffix
+          })
         });
         console.log('Gas estimate:', gasEstimate.toString());
       } catch (gasError) {
@@ -250,7 +235,7 @@ export function MintForm() {
           abi: contractABI,
           functionName: 'mint',
           args: []
-        }) + dataSuffix, // Add Divvi data suffix
+        }),
         gas: `0x${gasEstimate.toString(16)}`
       };
 
@@ -261,12 +246,6 @@ export function MintForm() {
       });
 
       console.log('Transaction sent:', txHash);
-
-      // Submit referral to Divvi
-      await submitReferral({
-        txHash,
-        chainId: currentChainId,
-      });
 
       // Wait for transaction receipt
       console.log('Waiting for transaction receipt...');
@@ -306,79 +285,19 @@ export function MintForm() {
             }
           } catch (parseError) {
             console.warn('Error parsing log:', parseError);
-            continue;
           }
         }
       }
 
-      if (!tokenId) {
-        // Fallback: try to get the latest token from the contract
-        console.warn('Could not find token ID in logs, showing success anyway');
-        setMintedNFT({
-          tokenId: 'Unknown',
-          imageUrl: null,
-          name: 'NFT Minted Successfully',
-        });
-        setShowSuccessModal(true);
-        return;
-      }
-
-      console.log('Found minted token ID:', tokenId.toString());
-
-      // Try to fetch metadata
-      try {
-        const metadataUri = await client.readContract({
-          address: CONTRACT_ADDRESS,
-          abi: contractABI,
-          functionName: 'tokenURI',
-          args: [tokenId],
-        });
-
-        console.log('Metadata URI:', metadataUri);
-
-        if (metadataUri) {
-          const ipfsUrl = metadataUri.replace('ipfs://', 'https://ipfs.io/ipfs/');
-          const metadataResponse = await fetch(ipfsUrl);
-          
-          if (metadataResponse.ok) {
-            const metadata = await metadataResponse.json();
-            
-            setMintedNFT({
-              tokenId: tokenId.toString(),
-              imageUrl: metadata.image ? metadata.image.replace('ipfs://', 'https://ipfs.io/ipfs/') : null,
-              name: metadata.name || `NFT #${tokenId}`,
-            });
-          } else {
-            throw new Error('Failed to fetch metadata');
-          }
-        } else {
-          throw new Error('No metadata URI returned');
-        }
-      } catch (metadataError) {
-        console.warn('Could not fetch metadata:', metadataError);
-        setMintedNFT({
-          tokenId: tokenId.toString(),
-          imageUrl: null,
-          name: `NFT #${tokenId}`,
-        });
-      }
-
+      // Show success modal
+      setMintedNFT({
+        tokenId: tokenId ? tokenId.toString() : 'Unknown',
+        txHash: txHash
+      });
       setShowSuccessModal(true);
-
     } catch (err) {
-      console.error('Error minting NFT:', err);
-      
-      let errorMessage = 'An error occurred while minting';
-      
-      if (err.message) {
-        errorMessage = err.message;
-      } else if (err.code === 4001) {
-        errorMessage = 'Transaction was rejected by user';
-      } else if (err.code === -32603) {
-        errorMessage = 'Transaction failed - insufficient funds or contract error';
-      }
-      
-      setError(errorMessage);
+      console.error('Error during mint:', err);
+      setError(err.message || 'Failed to mint NFT');
     } finally {
       setIsMinting(false);
     }
