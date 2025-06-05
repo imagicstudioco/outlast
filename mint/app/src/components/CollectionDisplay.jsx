@@ -66,23 +66,7 @@ export function CollectionDisplay() {
         priority
       />
       
-      {walletAddress && (
-        <div className={styles.inviteListContainer}>
-          {loading && <p>Checking invite list eligibility...</p>}
-          {error && <p className={styles.error}>Error: {error}</p>}
-          {!loading && !error && inviteLists.length > 0 && (
-            <div className={styles.inviteListInfo}>
-              <h3>Your Free Mint Eligibility:</h3>
-              {inviteLists.map((list) => (
-                <div key={list.id} className={styles.inviteListItem}>
-                  <p>List: {list.name}</p>
-                  <p>Mints Remaining: {list.mints_remaining}</p>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+
     </div>
   );
 }
