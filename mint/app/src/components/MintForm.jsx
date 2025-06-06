@@ -8,7 +8,7 @@ import { base } from 'viem/chains';
 import * as frame from '@farcaster/frame-sdk';
 import { getDataSuffix, submitReferral } from '@divvi/referral-sdk';
 
-const CONTRACT_ADDRESS = '0x4a02d17aff1590b270bb631427d49cced8775033';
+const CONTRACT_ADDRESS = '0x9f4f7b2acff63c12d1ffa98feb16f9fdcc529113';
 const MINT_PRICE = '0.001';
 
 // Divvi configuration
