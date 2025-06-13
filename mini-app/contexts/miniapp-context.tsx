@@ -11,6 +11,7 @@ import {
   type ReactNode,
 } from "react";
 import FrameWalletProvider from "./frame-wallet-context";
+import { addFrame } from '@farcaster/frame-core'
 
 interface MiniAppContextType {
   isMiniAppReady: boolean;
