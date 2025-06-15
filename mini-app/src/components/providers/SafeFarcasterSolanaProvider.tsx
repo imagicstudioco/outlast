@@ -1,6 +1,6 @@
 import React, { createContext, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import { sdk } from '@farcaster/frame-sdk';
+import { useWallet } from '@solana/wallet-adapter-react';
 
 const FarcasterSolanaProvider = dynamic(
   () => import('@farcaster/mini-app-solana').then(mod => mod.FarcasterSolanaProvider),
@@ -18,15 +18,15 @@ export function SafeFarcasterSolanaProvider({ endpoint, children }: SafeFarcaste
   const isClient = typeof window !== "undefined";
   const [hasSolanaProvider, setHasSolanaProvider] = useState<boolean>(false);
   const [checked, setChecked] = useState<boolean>(false);
+  const { wallet } = useWallet();
 
   useEffect(() => {
     if (!isClient) return;
     let cancelled = false;
     (async () => {
       try {
-        const provider = await sdk.wallet.getSolanaProvider();
         if (!cancelled) {
-          setHasSolanaProvider(!!provider);
+          setHasSolanaProvider(!!wallet);
         }
       } catch {
         if (!cancelled) {
@@ -41,7 +41,7 @@ export function SafeFarcasterSolanaProvider({ endpoint, children }: SafeFarcaste
     return () => {
       cancelled = true;
     };
-  }, [isClient]);
+  }, [isClient, wallet]);
 
   useEffect(() => {
     let errorShown = false;
