@@ -97,7 +97,7 @@ export function VotingPage() {
       <div className="text-center mb-8">
         <h1 className="text-4xl font-bold mb-2">Daily Voting</h1>
         <div className="flex items-center justify-center space-x-2 text-xl">
-          <Icon name="clock" className="w-6 h-6" />
+          <Icon name="star" className="w-6 h-6" />
           <span>Time Remaining: {timeRemaining}</span>
         </div>
       </div>
