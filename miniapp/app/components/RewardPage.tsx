@@ -146,7 +146,7 @@ export function RewardPage() {
             <div className="flex items-center justify-between">
               <span className="text-gray-600">Time Remaining</span>
               <div className="flex items-center space-x-2">
-                <Icon name="clock" className="w-5 h-5" />
+                <Icon name="star" className="w-5 h-5" />
                 <span className="font-bold">{dailyDraw.timeRemaining}</span>
               </div>
             </div>
