@@ -35,24 +35,6 @@ interface RewardEligibility {
   nextClaimDate: string | null;
 }
 
-interface VotingHistory {
-  round: number;
-  mvpVote: string;
-  eliminationVote: string;
-  timestamp: string;
-}
-
-interface ParticipationStats {
-  totalVotes: number;
-  correctPredictions: number;
-  mvpVotes: number;
-  eliminationVotes: number;
-  participationRate: number;
-  averageScore: number;
-  highestScore: number;
-  roundsPlayed: number;
-}
-
 interface UserProfile {
   address: string;
   name: string;

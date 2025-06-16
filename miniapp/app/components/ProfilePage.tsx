@@ -4,7 +4,6 @@ import React, { useState, useEffect } from "react";
 import { useAccount } from "wagmi";
 import { Button } from "./Button";
 import { Card } from "./Card";
-import { Icon } from "./Icon";
 
 interface VotingHistory {
   round: number;
