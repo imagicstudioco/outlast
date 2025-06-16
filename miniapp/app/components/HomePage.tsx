@@ -5,6 +5,11 @@ import { useAccount } from "wagmi";
 import { Button } from "./Button";
 import { Card } from "./Card";
 
+interface LeaderboardPlayer {
+  address: string;
+  score: number;
+}
+
 export function HomePage() {
   const { isConnected } = useAccount();
   const [gameStatus] = useState({
@@ -14,7 +19,7 @@ export function HomePage() {
     isActive: true
   });
 
-  const [leaderboard] = useState([]);
+  const [leaderboard] = useState<LeaderboardPlayer[]>([]);
 
   useEffect(() => {
     // TODO: Fetch game status and leaderboard data from your backend
