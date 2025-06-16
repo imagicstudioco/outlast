@@ -23,12 +23,6 @@ const nextConfig = {
             publicPath: '/_next/',
           },
         },
-        {
-          loader: 'ts-loader',
-          options: {
-            transpileOnly: true,
-          },
-        },
       ],
     });
 
