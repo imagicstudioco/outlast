@@ -1,9 +1,0 @@
-{
-  "buildCommand": "next build",
-  "framework": "nextjs",
-  "build": {
-    "env": {
-      "NPM_FLAGS": "--legacy-peer-deps"
-    }
-  }
-} 
