@@ -119,6 +119,13 @@ const leaderboardRoutes = require('./routes/leaderboard');
 const profileRoutes = require('./routes/profile');
 const rewardsRoutes = require('./routes/rewards');
 
+// Root route
+app.get('/', (req, res) => {
+  console.log('📡 GET / - Root endpoint called');
+  res.send('<h1>Outlast Backend API Server Is Running</h1>');
+});
+
+
 // Apply routes
 app.use('/api/game', gameRoutes);
 app.use('/api/voting', votingRoutes);
