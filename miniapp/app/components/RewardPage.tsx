@@ -64,27 +64,16 @@ interface UserProfile {
 
 export function RewardPage() {
   const { address, isConnected } = useAccount();
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [votingHistory, setVotingHistory] = useState<VotingHistory[]>([]);
-  const [stats, setStats] = useState<ParticipationStats>({
-    totalVotes: 0,
-    correctPredictions: 0,
-    mvpVotes: 0,
-    eliminationVotes: 0,
-    participationRate: 0,
-    averageScore: 0,
-    highestScore: 0,
-    roundsPlayed: 0,
-  });
-  const [rewards, setRewards] = useState<Reward[]>([]);
-  const [dailyDraw, setDailyDraw] = useState<DailyDraw>({
+  const [profile] = useState<UserProfile | null>(null);
+  const [rewards] = useState<Reward[]>([]);
+  const [dailyDraw] = useState<DailyDraw>({
     nextDraw: "",
     timeRemaining: "00:00:00",
     prizePool: 0,
     participants: 0,
     lastWinner: null
   });
-  const [eligibility, setEligibility] = useState<RewardEligibility>({
+  const [eligibility] = useState<RewardEligibility>({
     isEligible: false,
     requiredVotes: 0,
     currentVotes: 0,

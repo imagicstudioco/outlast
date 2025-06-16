@@ -14,9 +14,9 @@ interface Participant {
 }
 
 export function VotingPage() {
-  const { address, isConnected } = useAccount();
-  const [timeRemaining, setTimeRemaining] = useState("00:00:00");
-  const [participants, setParticipants] = useState<Participant[]>([]);
+  const { isConnected } = useAccount();
+  const [timeRemaining] = useState("00:00:00");
+  const [participants] = useState<Participant[]>([]);
   const [selectedMVP, setSelectedMVP] = useState<string | null>(null);
   const [selectedElimination, setSelectedElimination] = useState<string | null>(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
@@ -83,7 +83,7 @@ export function VotingPage() {
       <div className="flex items-center justify-center min-h-screen">
         <Card className="p-6 text-center">
           <h2 className="text-2xl font-semibold mb-4">Votes Submitted!</h2>
-          <p className="text-gray-600 mb-4">Thank you for participating in today's voting</p>
+          <p className="text-gray-600 mb-4">Thank you for participating in today&apos;s voting</p>
           <Button onClick={() => setHasVoted(false)}>
             View Results
           </Button>

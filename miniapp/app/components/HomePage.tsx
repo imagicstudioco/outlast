@@ -1,27 +1,20 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useAccount, useWalletClient, usePublicClient, useConnect } from "wagmi";
-import { parseUnits, formatUnits } from "viem";
+import { useAccount } from "wagmi";
 import { Button } from "./Button";
 import { Card } from "./Card";
-import { API_BASE_URL } from '../config';
-import { injected } from 'wagmi/connectors';
-import { Icon } from "./Icon";
-import { sdk } from '@farcaster/frame-sdk'
-
-
 
 export function HomePage() {
-  const { address, isConnected } = useAccount();
-  const [gameStatus, setGameStatus] = useState({
+  const { isConnected } = useAccount();
+  const [gameStatus] = useState({
     currentRound: 1,
     totalPlayers: 0,
     timeRemaining: "00:00:00",
     isActive: true
   });
 
-  const [leaderboard, setLeaderboard] = useState([]);
+  const [leaderboard] = useState([]);
 
   useEffect(() => {
     // TODO: Fetch game status and leaderboard data from your backend

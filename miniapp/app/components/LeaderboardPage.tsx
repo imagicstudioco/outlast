@@ -1,10 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useAccount } from "wagmi";
 import { Button } from "./Button";
 import { Card } from "./Card";
-import { Icon } from "./Icon";
 
 interface Participant {
   id: string;
@@ -31,9 +29,8 @@ interface Statistics {
 }
 
 export function LeaderboardPage() {
-  const { address, isConnected } = useAccount();
-  const [participants, setParticipants] = useState<Participant[]>([]);
-  const [statistics, setStatistics] = useState<Statistics>({
+  const [participants] = useState<Participant[]>([]);
+  const [statistics] = useState<Statistics>({
     totalParticipants: 0,
     averageScore: 0,
     highestScore: 0,

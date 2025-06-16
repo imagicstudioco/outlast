@@ -35,9 +35,9 @@ interface UserProfile {
 
 export function ProfilePage() {
   const { address, isConnected } = useAccount();
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [votingHistory, setVotingHistory] = useState<VotingHistory[]>([]);
-  const [stats, setStats] = useState<ParticipationStats>({
+  const [profile] = useState<UserProfile | null>(null);
+  const [votingHistory] = useState<VotingHistory[]>([]);
+  const [stats] = useState<ParticipationStats>({
     totalVotes: 0,
     correctPredictions: 0,
     mvpVotes: 0,

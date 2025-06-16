@@ -1,8 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useAccount } from "wagmi";
-import { Button } from "./Button";
 import { Card } from "./Card";
 import { Icon } from "./Icon";
 
@@ -41,8 +39,7 @@ interface GameRule {
 }
 
 export function GameStatus() {
-  const { address, isConnected } = useAccount();
-  const [gameSession, setGameSession] = useState<GameSession>({
+  const [gameSession] = useState<GameSession>({
     currentRound: 0,
     totalRounds: 0,
     startTime: "",
@@ -53,8 +50,8 @@ export function GameStatus() {
     activeParticipants: 0,
     prizePool: 0
   });
-  const [rounds, setRounds] = useState<Round[]>([]);
-  const [rules, setRules] = useState<GameRule[]>([
+  const [rounds] = useState<Round[]>([]);
+  const [rules] = useState<GameRule[]>([
     {
       title: "Game Overview",
       description: "Outlast is a daily elimination game where participants vote for MVP and elimination. The last player standing wins the prize pool.",
