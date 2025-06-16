@@ -12,15 +12,13 @@ const nextConfig = {
     
     config.externals.push("pino-pretty", "lokijs", "encoding");
 
-    // Add worker-loader configuration
+    // Configure web worker handling
     config.module.rules.push({
       test: /\.worker\.(js|ts)$/,
-      use: {
-        loader: 'worker-loader',
-        options: {
-          filename: 'static/[hash].worker.js',
-          publicPath: '/_next/',
-        },
+      loader: 'worker-loader',
+      options: {
+        filename: 'static/[hash].worker.js',
+        publicPath: '/_next/',
       },
     });
 
