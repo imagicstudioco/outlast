@@ -14,16 +14,15 @@ const nextConfig = {
 
     // Configure web worker handling
     config.module.rules.push({
-      test: /-worker\.(js|ts)$/,
-      use: [
-        {
-          loader: 'worker-loader',
-          options: {
-            filename: 'static/[hash].worker.js',
-            publicPath: '/_next/',
-          },
+      test: /\.worker\.(js|ts)$/,
+      use: {
+        loader: 'worker-loader',
+        options: {
+          filename: 'static/[hash].worker.js',
+          publicPath: '/_next/',
+          inline: 'fallback',
         },
-      ],
+      },
     });
 
     return config;

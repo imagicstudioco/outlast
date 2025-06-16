@@ -1,7 +1,7 @@
 // This is a web worker
-const ctx: Worker = self as any;
+declare const self: Worker;
 
-let heartbeatInterval: number | null = null;
+let heartbeatInterval: ReturnType<typeof setInterval> | null = null;
 
 function startHeartbeat() {
   if (heartbeatInterval) {
@@ -9,7 +9,7 @@ function startHeartbeat() {
   }
   
   heartbeatInterval = setInterval(() => {
-    ctx.postMessage({ type: 'heartbeat', timestamp: Date.now() });
+    self.postMessage({ type: 'heartbeat', timestamp: Date.now() });
   }, 30000); // Send heartbeat every 30 seconds
 }
 
@@ -20,7 +20,7 @@ function stopHeartbeat() {
   }
 }
 
-ctx.addEventListener('message', (event) => {
+self.addEventListener('message', (event) => {
   if (event.data === 'start') {
     startHeartbeat();
   } else if (event.data === 'stop') {
@@ -28,6 +28,6 @@ ctx.addEventListener('message', (event) => {
   }
 });
 
-ctx.addEventListener('beforeunload', () => {
+self.addEventListener('beforeunload', () => {
   stopHeartbeat();
 }); 
