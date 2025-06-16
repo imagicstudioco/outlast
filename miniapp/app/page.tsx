@@ -133,7 +133,7 @@ export default function App() {
         </main>
 
         <footer className="mt-2 pt-4 flex justify-center">
-          AirtimePlus
+          Outlast
         </footer>
       </div>
     </div>
