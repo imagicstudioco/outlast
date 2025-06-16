@@ -15,11 +15,21 @@ const nextConfig = {
     // Configure web worker handling
     config.module.rules.push({
       test: /\.worker\.(js|ts)$/,
-      loader: 'worker-loader',
-      options: {
-        filename: 'static/[hash].worker.js',
-        publicPath: '/_next/',
-      },
+      use: [
+        {
+          loader: 'worker-loader',
+          options: {
+            filename: 'static/[hash].worker.js',
+            publicPath: '/_next/',
+          },
+        },
+        {
+          loader: 'ts-loader',
+          options: {
+            transpileOnly: true,
+          },
+        },
+      ],
     });
 
     return config;
