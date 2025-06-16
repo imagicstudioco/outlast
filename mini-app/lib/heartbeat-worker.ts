@@ -1,4 +1,7 @@
-let heartbeatInterval: NodeJS.Timeout | null = null;
+// This is a web worker
+const ctx: Worker = self as any;
+
+let heartbeatInterval: number | null = null;
 
 function startHeartbeat() {
   if (heartbeatInterval) {
@@ -6,7 +9,7 @@ function startHeartbeat() {
   }
   
   heartbeatInterval = setInterval(() => {
-    self.postMessage({ type: 'heartbeat', timestamp: Date.now() });
+    ctx.postMessage({ type: 'heartbeat', timestamp: Date.now() });
   }, 30000); // Send heartbeat every 30 seconds
 }
 
@@ -17,7 +20,7 @@ function stopHeartbeat() {
   }
 }
 
-self.addEventListener('message', (event) => {
+ctx.addEventListener('message', (event) => {
   if (event.data === 'start') {
     startHeartbeat();
   } else if (event.data === 'stop') {
@@ -25,6 +28,6 @@ self.addEventListener('message', (event) => {
   }
 });
 
-self.addEventListener('beforeunload', () => {
+ctx.addEventListener('beforeunload', () => {
   stopHeartbeat();
 }); 

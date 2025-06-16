@@ -14,7 +14,7 @@ const nextConfig = {
 
     // Configure web worker handling
     config.module.rules.push({
-      test: /\.worker\.(js|ts)$/,
+      test: /-worker\.(js|ts)$/,
       use: [
         {
           loader: 'worker-loader',
