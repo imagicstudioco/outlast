@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "./Button";
 import { Card } from "./Card";
+import mockData from "../data/mockData.json";
 
 interface Participant {
   id: string;
@@ -29,8 +30,8 @@ interface Statistics {
 }
 
 export function LeaderboardPage() {
-  const [participants] = useState<Participant[]>([]);
-  const [statistics] = useState<Statistics>({
+  const [participants, setParticipants] = useState<Participant[]>([]);
+  const [statistics, setStatistics] = useState<Statistics>({
     totalParticipants: 0,
     averageScore: 0,
     highestScore: 0,
@@ -41,16 +42,48 @@ export function LeaderboardPage() {
   const [timeFilter, setTimeFilter] = useState<'all' | 'week' | 'month'>('all');
 
   useEffect(() => {
-    // TODO: Fetch leaderboard data
-    const fetchLeaderboardData = async () => {
-      try {
-        // Add your API calls here
-      } catch (error) {
-        console.error("Error fetching leaderboard data:", error);
-      }
-    };
+    // Transform mock data into the required format
+    const currentRankings = mockData.leaderboard.currentSession.rankings;
+    const allTimeRankings = mockData.leaderboard.allTime.rankings;
 
-    fetchLeaderboardData();
+    // Transform rankings into participants
+    const transformedParticipants: Participant[] = currentRankings.map((rank, index) => {
+      const allTimeRank = allTimeRankings.find(r => r.wallet_address === rank.wallet_address);
+      return {
+        id: `participant_${index + 1}`,
+        address: rank.wallet_address,
+        name: `Player ${index + 1}`, // You might want to add names to your mock data
+        rank: rank.rank,
+        score: parseInt(rank.total_votes),
+        wins: allTimeRank ? allTimeRank.sessions_won : 0,
+        losses: 0, // You might want to add this to your mock data
+        mvpCount: 0, // You might want to add this to your mock data
+        history: [
+          {
+            round: 1,
+            score: parseInt(rank.total_votes),
+            rank: rank.rank
+          }
+        ]
+      };
+    });
+
+    // Calculate statistics
+    const totalParticipants = mockData.game.currentSession.total_players;
+    const activeParticipants = mockData.game.currentSession.total_players - mockData.game.currentSession.eliminated_players;
+    const scores = transformedParticipants.map(p => p.score);
+    const averageScore = scores.reduce((a, b) => a + b, 0) / scores.length;
+    const highestScore = Math.max(...scores);
+    const totalRounds = mockData.game.currentSession.current_round;
+
+    setParticipants(transformedParticipants);
+    setStatistics({
+      totalParticipants,
+      averageScore: Math.round(averageScore),
+      highestScore,
+      totalRounds,
+      activeParticipants
+    });
   }, [timeFilter]);
 
   const getRankColor = (rank: number) => {

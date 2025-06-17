@@ -1,0 +1,218 @@
+{
+  "game": {
+    "currentSession": {
+      "id": "session_123",
+      "status": "active",
+      "start_time": "2024-03-20T10:00:00Z",
+      "end_time": "2024-03-27T10:00:00Z",
+      "total_players": 150,
+      "current_round": 3,
+      "prize_pool": "1000",
+      "eliminated_players": 45
+    },
+    "sessions": [
+      {
+        "id": "session_123",
+        "status": "active",
+        "start_time": "2024-03-20T10:00:00Z",
+        "end_time": "2024-03-27T10:00:00Z",
+        "total_players": 150,
+        "current_round": 3,
+        "prize_pool": "1000",
+        "eliminated_players": 45
+      },
+      {
+        "id": "session_122",
+        "status": "completed",
+        "start_time": "2024-03-13T10:00:00Z",
+        "end_time": "2024-03-20T10:00:00Z",
+        "total_players": 120,
+        "current_round": 5,
+        "prize_pool": "800",
+        "eliminated_players": 115
+      }
+    ]
+  },
+  "voting": {
+    "currentRound": {
+      "id": "round_456",
+      "game_session_id": "session_123",
+      "round_number": 3,
+      "start_time": "2024-03-20T10:00:00Z",
+      "end_time": "2024-03-21T10:00:00Z",
+      "status": "active",
+      "total_votes": 250,
+      "candidates": [
+        {
+          "id": "candidate_1",
+          "wallet_address": "0x123...abc",
+          "votes": 120,
+          "eliminated": false
+        },
+        {
+          "id": "candidate_2",
+          "wallet_address": "0x456...def",
+          "votes": 80,
+          "eliminated": false
+        },
+        {
+          "id": "candidate_3",
+          "wallet_address": "0x789...ghi",
+          "votes": 50,
+          "eliminated": false
+        }
+      ]
+    },
+    "rounds": [
+      {
+        "id": "round_456",
+        "game_session_id": "session_123",
+        "round_number": 3,
+        "start_time": "2024-03-20T10:00:00Z",
+        "end_time": "2024-03-21T10:00:00Z",
+        "status": "active",
+        "total_votes": 250,
+        "candidates": [
+          {
+            "id": "candidate_1",
+            "wallet_address": "0x123...abc",
+            "votes": 120,
+            "eliminated": false
+          },
+          {
+            "id": "candidate_2",
+            "wallet_address": "0x456...def",
+            "votes": 80,
+            "eliminated": false
+          },
+          {
+            "id": "candidate_3",
+            "wallet_address": "0x789...ghi",
+            "votes": 50,
+            "eliminated": false
+          }
+        ]
+      }
+    ]
+  },
+  "leaderboard": {
+    "currentSession": {
+      "rankings": [
+        {
+          "rank": 1,
+          "wallet_address": "0x123...abc",
+          "total_votes": 500,
+          "eliminated": false,
+          "prize_share": "0.4"
+        },
+        {
+          "rank": 2,
+          "wallet_address": "0x456...def",
+          "total_votes": 450,
+          "eliminated": false,
+          "prize_share": "0.3"
+        },
+        {
+          "rank": 3,
+          "wallet_address": "0x789...ghi",
+          "total_votes": 400,
+          "eliminated": false,
+          "prize_share": "0.2"
+        }
+      ]
+    },
+    "allTime": {
+      "rankings": [
+        {
+          "rank": 1,
+          "wallet_address": "0x123...abc",
+          "total_winnings": "5000",
+          "sessions_won": 3
+        },
+        {
+          "rank": 2,
+          "wallet_address": "0x456...def",
+          "total_winnings": "3000",
+          "sessions_won": 2
+        },
+        {
+          "rank": 3,
+          "wallet_address": "0x789...ghi",
+          "total_winnings": "2000",
+          "sessions_won": 1
+        }
+      ]
+    }
+  },
+  "profile": {
+    "user": {
+      "fid": "12345",
+      "wallet_address": "0x123...abc",
+      "username": "crypto_king",
+      "total_votes": 1000,
+      "sessions_played": 5,
+      "sessions_won": 2,
+      "total_winnings": "3000",
+      "current_streak": 3,
+      "best_streak": 5,
+      "join_date": "2024-01-01T00:00:00Z"
+    },
+    "votingHistory": [
+      {
+        "session_id": "session_123",
+        "round_number": 3,
+        "voted_for": "0x456...def",
+        "timestamp": "2024-03-20T15:30:00Z"
+      },
+      {
+        "session_id": "session_123",
+        "round_number": 2,
+        "voted_for": "0x789...ghi",
+        "timestamp": "2024-03-19T15:30:00Z"
+      }
+    ]
+  },
+  "rewards": {
+    "currentRewards": {
+      "session_id": "session_123",
+      "prize_pool": "1000",
+      "distribution": [
+        {
+          "rank": 1,
+          "percentage": 40,
+          "amount": "400"
+        },
+        {
+          "rank": 2,
+          "percentage": 30,
+          "amount": "300"
+        },
+        {
+          "rank": 3,
+          "percentage": 20,
+          "amount": "200"
+        }
+      ]
+    },
+    "userRewards": {
+      "total_earned": "3000",
+      "pending_rewards": "400",
+      "recent_rewards": [
+        {
+          "session_id": "session_122",
+          "amount": "400",
+          "rank": 1,
+          "timestamp": "2024-03-20T10:00:00Z",
+          "status": "claimed"
+        },
+        {
+          "session_id": "session_121",
+          "amount": "300",
+          "rank": 2,
+          "timestamp": "2024-03-13T10:00:00Z",
+          "status": "claimed"
+        }
+      ]
+    }
+  }
+} 

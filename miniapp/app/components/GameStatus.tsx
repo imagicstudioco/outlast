@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Card } from "./Card";
 import { Icon } from "./Icon";
+import mockData from "../data/mockData.json";
 
 interface GameSession {
   currentRound: number;
@@ -39,7 +40,7 @@ interface GameRule {
 }
 
 export function GameStatus() {
-  const [gameSession] = useState<GameSession>({
+  const [gameSession, setGameSession] = useState<GameSession>({
     currentRound: 0,
     totalRounds: 0,
     startTime: "",
@@ -50,7 +51,7 @@ export function GameStatus() {
     activeParticipants: 0,
     prizePool: 0
   });
-  const [rounds] = useState<Round[]>([]);
+  const [rounds, setRounds] = useState<Round[]>([]);
   const [rules] = useState<GameRule[]>([
     {
       title: "Game Overview",
@@ -75,26 +76,66 @@ export function GameStatus() {
   ]);
 
   useEffect(() => {
-    // TODO: Fetch game session data
-    const fetchGameData = async () => {
-      try {
-        // Add your API calls here
-      } catch (error) {
-        console.error("Error fetching game data:", error);
-      }
+    // Transform mock data into the required format
+    const currentSession = mockData.game.currentSession;
+    const transformedGameSession: GameSession = {
+      currentRound: currentSession.current_round,
+      totalRounds: 7, // Assuming 7 rounds per session
+      startTime: currentSession.start_time,
+      endTime: currentSession.end_time,
+      timeRemaining: calculateTimeRemaining(currentSession.end_time),
+      status: currentSession.status as 'active' | 'completed' | 'upcoming',
+      totalParticipants: currentSession.total_players,
+      activeParticipants: currentSession.total_players - currentSession.eliminated_players,
+      prizePool: parseFloat(currentSession.prize_pool)
     };
 
-    fetchGameData();
+    // Transform voting rounds data
+    const transformedRounds: Round[] = mockData.voting.rounds.map(round => ({
+      number: round.round_number,
+      startTime: round.start_time,
+      endTime: round.end_time,
+      mvp: {
+        address: round.candidates[0].wallet_address,
+        score: round.candidates[0].votes
+      },
+      eliminated: {
+        address: round.candidates[round.candidates.length - 1].wallet_address,
+        reason: "Most elimination votes"
+      },
+      totalVotes: round.total_votes,
+      status: round.status as 'completed' | 'active' | 'upcoming'
+    }));
+
+    setGameSession(transformedGameSession);
+    setRounds(transformedRounds);
   }, []);
 
   useEffect(() => {
     // Timer countdown logic
     const timer = setInterval(() => {
-      // TODO: Implement actual timer logic
+      setGameSession(prev => ({
+        ...prev,
+        timeRemaining: calculateTimeRemaining(prev.endTime)
+      }));
     }, 1000);
 
     return () => clearInterval(timer);
   }, []);
+
+  const calculateTimeRemaining = (endTime: string): string => {
+    const end = new Date(endTime).getTime();
+    const now = new Date().getTime();
+    const timeLeft = end - now;
+
+    if (timeLeft <= 0) return "00:00:00";
+
+    const hours = Math.floor(timeLeft / (1000 * 60 * 60));
+    const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -196,7 +237,7 @@ export function GameStatus() {
                   </div>
                   <div className="mt-4 flex justify-between items-center text-sm text-gray-500">
                     <span>Total Votes: {round.totalVotes}</span>
-                    <span>{round.endTime}</span>
+                    <span>{new Date(round.endTime).toLocaleDateString()}</span>
                   </div>
                 </div>
               ))

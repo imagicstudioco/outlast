@@ -1,10 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useAccount } from "wagmi";
+import { useAccount, useSigner } from "wagmi";
 import { Button } from "./Button";
 import { Card } from "./Card";
 import { Icon } from "./Icon";
+import { ethers } from "ethers";
+import OutlastGameABI from "../../../contracts/out/OutlastGame.sol/OutlastGame.json";
 
 interface Participant {
   id: string;
@@ -14,34 +16,48 @@ interface Participant {
 }
 
 export function VotingPage() {
-  const { isConnected } = useAccount();
-  const [timeRemaining] = useState("00:00:00");
-  const [participants] = useState<Participant[]>([]);
+  const { address, isConnected } = useAccount();
+  const { data: signer } = useSigner();
+  const [timeRemaining, setTimeRemaining] = useState("00:00:00");
+  const [participants, setParticipants] = useState<Participant[]>([]);
   const [selectedMVP, setSelectedMVP] = useState<string | null>(null);
   const [selectedElimination, setSelectedElimination] = useState<string | null>(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [hasVoted, setHasVoted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // TODO: Fetch participants and voting status
     const fetchVotingData = async () => {
       try {
-        // Add your API calls here
-      } catch (error) {
-        console.error("Error fetching voting data:", error);
+        const res = await fetch("/app/data/mockData.json");
+        const data = await res.json();
+        const candidates = data.voting.currentRound.candidates;
+        setParticipants(
+          candidates.map((c: any) => ({
+            id: c.id,
+            address: c.wallet_address,
+            name: c.wallet_address,
+            votes: c.votes,
+          }))
+        );
+        const endTime = new Date(data.voting.currentRound.end_time).getTime();
+        const updateTimer = () => {
+          const now = Date.now();
+          const diff = Math.max(0, endTime - now);
+          const h = String(Math.floor(diff / 3600000)).padStart(2, "0");
+          const m = String(Math.floor((diff % 3600000) / 60000)).padStart(2, "0");
+          const s = String(Math.floor((diff % 60000) / 1000)).padStart(2, "0");
+          setTimeRemaining(`${h}:${m}:${s}`);
+        };
+        updateTimer();
+        const timer = setInterval(updateTimer, 1000);
+        return () => clearInterval(timer);
+      } catch (err) {
+        setError("Failed to load voting data");
       }
     };
-
     fetchVotingData();
-  }, []);
-
-  useEffect(() => {
-    // Timer countdown logic
-    const timer = setInterval(() => {
-      // TODO: Implement actual timer logic
-    }, 1000);
-
-    return () => clearInterval(timer);
   }, []);
 
   const handleVote = (type: 'mvp' | 'elimination', participantId: string) => {
@@ -53,14 +69,28 @@ export function VotingPage() {
   };
 
   const handleSubmitVotes = async () => {
-    if (!selectedMVP || !selectedElimination) return;
-    
+    if (!selectedMVP || !selectedElimination || !signer) return;
+    setLoading(true);
+    setError(null);
     try {
-      // TODO: Implement vote submission logic
+      const contract = new ethers.Contract(
+        "0x60c5b60bb3352bd09663eb8ee13ce90b1b8086f6",
+        OutlastGameABI.abi,
+        signer
+      );
+      const mvp = participants.find((p) => p.id === selectedMVP);
+      const elim = participants.find((p) => p.id === selectedElimination);
+      if (!mvp || !elim) throw new Error("Invalid participant selection");
+      const tx1 = await contract.castVote(mvp.id, 0);
+      await tx1.wait();
+      const tx2 = await contract.castVote(elim.id, 1);
+      await tx2.wait();
       setShowConfirmation(true);
       setHasVoted(true);
-    } catch (error) {
-      console.error("Error submitting votes:", error);
+    } catch (err: any) {
+      setError(err.message || "Error submitting votes");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -189,6 +219,18 @@ export function VotingPage() {
           >
             Review Votes
           </Button>
+        </div>
+      )}
+
+      {/* Loading and Error UI */}
+      {loading && (
+        <div className="flex justify-center mt-6">
+          <p className="text-gray-600">Submitting votes...</p>
+        </div>
+      )}
+      {error && (
+        <div className="flex justify-center mt-6 text-red-500">
+          <p>{error}</p>
         </div>
       )}
     </div>
