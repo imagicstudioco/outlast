@@ -1,31 +1,21 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useAccount, useContractWrite, usePrepareContractWrite } from "wagmi";
+import { useAccount, useContractWrite } from "wagmi";
 import { Button } from "./Button";
 import { Card } from "./Card";
-import { readContract } from "viem";
 import OutlastGameAbi from "../../../contracts/out/OutlastGame.sol/OutlastGame.json";
+import { type Address } from "viem";
 
-interface VotingHistory {
-  round: number;
-  mvpVote: string;
-  eliminationVote: string;
-  timestamp: string;
-}
+const CONTRACT_ADDRESS = "0x60c5b60bb3352bd09663eb8ee13ce90b1b8086f6" as Address;
 
-interface ParticipationStats {
-  totalVotes: number;
-  correctPredictions: number;
-  mvpVotes: number;
-  eliminationVotes: number;
-  participationRate: number;
-  averageScore: number;
-  highestScore: number;
-  roundsPlayed: number;
+interface Candidate {
+  id: number;
+  wallet_address: string;
 }
 
 interface UserProfile {
+  username: string;
   address: string;
   name: string;
   joinDate: string;
@@ -34,27 +24,22 @@ interface UserProfile {
   totalScore: number;
 }
 
-const CONTRACT_ADDRESS = "0x60c5b60bb3352bd09663eb8ee13ce90b1b8086f6";
+interface VotingHistory {
+  round: number;
+  mvpVote: string;
+  eliminationVote: string;
+  timestamp: string;
+}
 
 export function ProfilePage() {
-  const { address, isConnected } = useAccount();
+  const { isConnected } = useAccount();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [votingHistory, setVotingHistory] = useState<VotingHistory[]>([]);
-  const [candidates, setCandidates] = useState([]);
+  const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const [voteLoading, setVoteLoading] = useState(false);
-  const [voteError, setVoteError] = useState(null);
-  const [stats] = useState<ParticipationStats>({
-    totalVotes: 0,
-    correctPredictions: 0,
-    mvpVotes: 0,
-    eliminationVotes: 0,
-    participationRate: 0,
-    averageScore: 0,
-    highestScore: 0,
-    roundsPlayed: 0,
-  });
+  const [voteError, setVoteError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -66,8 +51,9 @@ export function ProfilePage() {
         setProfile(data.profile.user);
         setVotingHistory(data.profile.votingHistory);
         setCandidates(data.voting.currentRound.candidates);
-      } catch (e) {
+      } catch (error) {
         setError("Failed to load profile data");
+        console.error("Error loading profile data:", error);
       } finally {
         setLoading(false);
       }
@@ -76,21 +62,21 @@ export function ProfilePage() {
   }, []);
 
   // Voting logic
-  const { config, error: prepareError } = usePrepareContractWrite({
-    address: CONTRACT_ADDRESS,
-    abi: OutlastGameAbi.abi,
-    functionName: "castVote",
-    enabled: false, // enable on demand
-  });
-  const { writeAsync: castVote } = useContractWrite(config);
+  const { writeContract, isPending } = useContractWrite();
 
-  const handleVote = async (participantId, voteType) => {
+  const handleVote = async (participantId: number, voteType: number) => {
     setVoteLoading(true);
     setVoteError(null);
     try {
-      await castVote({ args: [participantId, voteType] });
-    } catch (e) {
+      await writeContract({
+        address: CONTRACT_ADDRESS,
+        abi: OutlastGameAbi.abi,
+        functionName: "castVote",
+        args: [participantId, voteType],
+      });
+    } catch (error) {
       setVoteError("Voting failed");
+      console.error("Error casting vote:", error);
     } finally {
       setVoteLoading(false);
     }
@@ -102,9 +88,7 @@ export function ProfilePage() {
         <Card className="p-6 text-center">
           <h2 className="text-2xl font-semibold mb-4">Connect Your Wallet</h2>
           <p className="text-gray-600 mb-4">Please connect your wallet to view your profile</p>
-          <Button onClick={() => {/* TODO: Implement wallet connection */}}>
-            Connect Wallet
-          </Button>
+          <Button onClick={() => {}}>Connect Wallet</Button>
         </Card>
       </div>
     );
@@ -140,109 +124,40 @@ export function ProfilePage() {
         <p className="text-gray-600">Welcome back, {profile?.name}</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Profile Information */}
-        <Card className="p-6">
-          <h2 className="text-2xl font-semibold mb-4">Profile Information</h2>
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">Status</span>
-              <span className={`font-bold ${
-                profile?.status === 'active' ? 'text-green-500' : 'text-red-500'
-              }`}>
-                {profile?.status.charAt(0).toUpperCase() + profile?.status.slice(1)}
-              </span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">Current Rank</span>
-              <span className="font-bold">#{profile?.currentRank}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">Total Score</span>
-              <span className="font-bold">{profile?.totalScore}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">Join Date</span>
-              <span className="font-bold">{profile?.joinDate}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">Wallet Address</span>
-              <span className="font-bold text-sm">{profile?.address}</span>
-            </div>
+      {/* Profile Status */}
+      <Card className="p-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-2xl font-semibold mb-2">Status</h2>
+            <p className={`text-lg ${profile?.status === 'active' ? 'text-green-500' : 'text-red-500'}`}>
+              {profile?.status === 'active' ? 'Active Player' : 'Eliminated'}
+            </p>
           </div>
-        </Card>
+          <div className="text-right">
+            <p className="text-gray-600">Current Rank</p>
+            <p className="text-2xl font-bold">#{profile?.currentRank}</p>
+          </div>
+        </div>
+      </Card>
 
-        {/* Participation Statistics */}
-        <Card className="p-6">
-          <h2 className="text-2xl font-semibold mb-4">Participation Statistics</h2>
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">Total Votes</span>
-              <span className="font-bold">{stats.totalVotes}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">Correct Predictions</span>
-              <span className="font-bold">{stats.correctPredictions}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">MVP Votes</span>
-              <span className="font-bold">{stats.mvpVotes}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">Elimination Votes</span>
-              <span className="font-bold">{stats.eliminationVotes}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">Participation Rate</span>
-              <span className="font-bold">{stats.participationRate}%</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">Average Score</span>
-              <span className="font-bold">{stats.averageScore}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">Highest Score</span>
-              <span className="font-bold">{stats.highestScore}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">Rounds Played</span>
-              <span className="font-bold">{stats.roundsPlayed}</span>
-            </div>
+      {/* Stats Overview */}
+      <Card className="p-6">
+        <h2 className="text-2xl font-semibold mb-4">Stats Overview</h2>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <p className="text-gray-600">Total Score</p>
+            <p className="text-2xl font-bold">{profile?.totalScore}</p>
           </div>
-        </Card>
-
-        {/* Voting History */}
-        <Card className="p-6 lg:col-span-3">
-          <h2 className="text-2xl font-semibold mb-4">Voting History</h2>
-          <div className="space-y-4">
-            {votingHistory.length > 0 ? (
-              votingHistory.map((vote) => (
-                <div
-                  key={vote.round}
-                  className="p-4 bg-gray-50 rounded-lg"
-                >
-                  <div className="flex justify-between items-center mb-2">
-                    <h3 className="font-semibold">Round {vote.round}</h3>
-                    <span className="text-sm text-gray-500">{vote.timestamp}</span>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-gray-600">MVP Vote</p>
-                      <p className="font-medium">{vote.mvpVote}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-600">Elimination Vote</p>
-                      <p className="font-medium">{vote.eliminationVote}</p>
-                    </div>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <p className="text-center text-gray-600">No voting history available</p>
-            )}
+          <div>
+            <p className="text-gray-600">Join Date</p>
+            <p className="text-lg">{profile?.joinDate}</p>
           </div>
-        </Card>
-      </div>
+          <div>
+            <p className="text-gray-600">Wallet Address</p>
+            <p className="text-sm font-mono">{profile?.address}</p>
+          </div>
+        </div>
+      </Card>
 
       {/* Candidates Voting */}
       <Card className="p-6">
@@ -269,6 +184,32 @@ export function ProfilePage() {
             </div>
           ))}
           {voteError && <p className="text-red-500">{voteError}</p>}
+        </div>
+      </Card>
+
+      {/* Voting History */}
+      <Card className="p-6">
+        <h2 className="text-2xl font-semibold mb-4">Voting History</h2>
+        <div className="space-y-4">
+          {votingHistory.map((vote, index) => (
+            <div key={index} className="border-b pb-4 last:border-b-0">
+              <p className="text-gray-600">Round {vote.round}</p>
+              <div className="flex justify-between mt-2">
+                <div>
+                  <p className="text-sm text-gray-500">MVP Vote</p>
+                  <p>{vote.mvpVote}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Elimination Vote</p>
+                  <p>{vote.eliminationVote}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Time</p>
+                  <p>{vote.timestamp}</p>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </Card>
     </div>
