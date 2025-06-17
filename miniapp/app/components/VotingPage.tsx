@@ -1,20 +1,9 @@
-import React, { useState, useEffect } from "react";
 import { useAccount, useWalletClient } from "wagmi";
+import { useState, useEffect } from "react";
 import { Button } from "./Button";
 import { Card } from "./Card";
-import { Icon } from "./Icon";
-import { ethers } from "ethers";
 import OutlastGameABI from "../../../contracts/out/OutlastGame.sol/OutlastGame.json";
 import { type Address } from "viem";
-
-interface Participant {
-  id: string;
-  address: string;
-  name: string;
-  votes: number;
-}
-
-const CONTRACT_ADDRESS = "0x60c5b60bb3352bd09663eb8ee13ce90b1b8086f6" as Address;
 
 interface Candidate {
   id: number;
@@ -29,12 +18,11 @@ interface VotingRound {
   endTime: string;
 }
 
+const CONTRACT_ADDRESS = "0x60c5b60bb3352bd09663eb8ee13ce90b1b8086f6" as Address;
+
 export function VotingPage() {
   const { isConnected } = useAccount();
   const { data: walletClient } = useWalletClient();
-  const [participants, setParticipants] = useState<Participant[]>([]);
-  const [showConfirmation, setShowConfirmation] = useState(false);
-  const [hasVoted, setHasVoted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentRound, setCurrentRound] = useState<VotingRound | null>(null);
@@ -49,18 +37,9 @@ export function VotingPage() {
         const res = await fetch("/app/data/mockData.json");
         const data = await res.json();
         setCurrentRound(data.voting.currentRound);
-        const candidates = data.voting.currentRound.candidates;
-        setParticipants(
-          candidates.map((c: Candidate) => ({
-            id: c.id.toString(),
-            address: c.wallet_address,
-            name: c.wallet_address,
-            votes: 0,
-          }))
-        );
-      } catch {
+      } catch (error: unknown) {
         setError("Failed to load voting data");
-        console.error("Error loading voting data:");
+        console.error("Error loading voting data:", error);
       } finally {
         setLoading(false);
       }
@@ -84,11 +63,9 @@ export function VotingPage() {
         args: [participantId, voteType],
       });
       console.log("Transaction hash:", hash);
-      setShowConfirmation(true);
-      setHasVoted(true);
-    } catch {
+    } catch (error: unknown) {
       setVoteError("Voting failed");
-      console.error("Error casting vote:");
+      console.error("Error casting vote:", error);
     } finally {
       setVoteLoading(false);
     }
