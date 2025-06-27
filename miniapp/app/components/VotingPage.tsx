@@ -4,7 +4,7 @@ import { useAccount, useWalletClient, usePublicClient } from "wagmi";
 import { useState, useEffect } from "react";
 import { Button } from "./Button";
 import { Card } from "./Card";
-import { OutlastGameABI } from "../constants/abi.ts";
+import { OutlastGameABI } from "../constants/abi";
 import { type Address } from "viem";
 import { API_BACKEND_URL } from "../config";
 
