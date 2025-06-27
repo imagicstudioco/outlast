@@ -2,7 +2,7 @@ import { useAccount, useWalletClient, usePublicClient } from "wagmi";
 import { useState, useEffect } from "react";
 import { Button } from "./Button";
 import { Card } from "./Card";
-import OutlastGameABI from "../../../contracts/out/OutlastGame.sol/OutlastGame.json";
+import OutlastGameABI from "../constants/abi.ts";
 import { type Address } from "viem";
 import { API_BACKEND_URL } from "../config";
 
