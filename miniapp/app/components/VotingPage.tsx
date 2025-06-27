@@ -1,3 +1,5 @@
+"use client";
+
 import { useAccount, useWalletClient, usePublicClient } from "wagmi";
 import { useState, useEffect } from "react";
 import { Button } from "./Button";
@@ -26,13 +28,9 @@ interface UserVotes {
   };
 }
 
-interface VoteProps {
-  setActiveTabAction: (tab: string) => void;
-}
-
 const CONTRACT_ADDRESS = "0x60c5b60bb3352bd09663eb8ee13ce90b1b8086f6" as Address;
 
-export const VotingPage: React.FC<VoteProps> = ({ setActiveTabAction }) => {
+export const VotingPage: React.FC = () => {
   const { isConnected, address } = useAccount();
   const { data: walletClient } = useWalletClient();
   const publicClient = usePublicClient();
@@ -48,34 +46,30 @@ export const VotingPage: React.FC<VoteProps> = ({ setActiveTabAction }) => {
       setLoading(true);
       setError(null);
       try {
-        // Fetch voting data from backend API
         const response = await fetch(`${API_BACKEND_URL}/api/voting`);
-        
-        if (!response.ok) {
-          throw new Error("Failed to fetch voting data");
-        }
-        
+        if (!response.ok) throw new Error("Failed to fetch voting data");
+
         const votingData = await response.json();
         setCurrentRound(votingData);
-        
-        // Initialize user votes tracking
+
         const initialVotes: UserVotes = {};
         if (votingData.candidates) {
           votingData.candidates.forEach((candidate: Candidate) => {
             initialVotes[candidate.id] = {
               mvp: false,
-              elimination: false
+              elimination: false,
             };
           });
         }
         setUserVotes(initialVotes);
-      } catch (error: unknown) {
+      } catch (err) {
         setError("Failed to load voting data");
-        console.error("Error loading voting data:", error);
+        console.error("Error loading voting data:", err);
       } finally {
         setLoading(false);
       }
     };
+
     fetchData();
   }, []);
 
@@ -85,8 +79,8 @@ export const VotingPage: React.FC<VoteProps> = ({ setActiveTabAction }) => {
       return;
     }
 
-    // Check if user has already voted for this candidate
     const voteTypeName = voteType === 0 ? 'mvp' : 'elimination';
+
     if (userVotes[participantId]?.[voteTypeName]) {
       setVoteError("You have already voted for this candidate");
       return;
@@ -94,54 +88,45 @@ export const VotingPage: React.FC<VoteProps> = ({ setActiveTabAction }) => {
 
     setVoteLoading(true);
     setVoteError(null);
-    
+
     try {
-      // Call the smart contract
       const hash = await walletClient.writeContract({
         address: CONTRACT_ADDRESS,
         abi: OutlastGameABI.abi,
         functionName: "castVote",
         args: [participantId, voteType],
       });
-      
-      console.log("Transaction hash:", hash);
-      
-      // Wait for transaction confirmation using public client
+
       const receipt = await publicClient.waitForTransactionReceipt({ hash });
-      
+
       if (receipt.status === 'success') {
-        // Update local vote tracking
-        setUserVotes(prev => ({
+        setUserVotes((prev) => ({
           ...prev,
           [participantId]: {
             ...prev[participantId],
-            [voteTypeName]: true
-          }
+            [voteTypeName]: true,
+          },
         }));
-        
-        // Submit vote to backend for tracking
+
         try {
           await fetch(`${API_BACKEND_URL}/api/voting/submit`, {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               voterId: address,
               votedForId: participantId,
-              voteType: voteType
+              voteType: voteType,
             }),
           });
         } catch (backendError) {
-          console.error("Failed to submit vote to backend:", backendError);
-          // Don't show error to user as smart contract transaction was successful
+          console.warn("Vote submitted onchain but not recorded in backend:", backendError);
         }
-        
+
         setVoteError(null);
       } else {
         throw new Error("Transaction failed");
       }
-    } catch (error: unknown) {
+    } catch (error) {
       setVoteError("Voting failed. Please try again.");
       console.error("Error casting vote:", error);
     } finally {
@@ -202,7 +187,6 @@ export const VotingPage: React.FC<VoteProps> = ({ setActiveTabAction }) => {
 
   return (
     <div className="space-y-6 animate-fade-in p-6">
-      {/* Round Header */}
       <div className="text-center mb-8">
         <h1 className="text-4xl font-bold mb-2">Round {currentRound.round}</h1>
         <p className="text-gray-600">
@@ -214,43 +198,30 @@ export const VotingPage: React.FC<VoteProps> = ({ setActiveTabAction }) => {
         </div>
       </div>
 
-      {/* Candidates Voting */}
       <Card className="p-6">
         <h2 className="text-2xl font-semibold mb-4">Vote for MVP or Elimination</h2>
         <div className="space-y-4">
-          {currentRound.candidates && currentRound.candidates.length > 0 ? (
+          {currentRound.candidates.length > 0 ? (
             currentRound.candidates.map((candidate) => (
               <div key={candidate.wallet_address} className="flex justify-between items-center p-4 border rounded-lg">
                 <div>
                   <span className="font-bold">{candidate.wallet_address}</span>
                   <div className="text-sm text-gray-500 mt-1">
-                    {hasVotedForCandidate(candidate.id, 0) && (
-                      <span className="text-green-600 mr-3">✓ Voted MVP</span>
-                    )}
-                    {hasVotedForCandidate(candidate.id, 1) && (
-                      <span className="text-red-600">✓ Voted Elimination</span>
-                    )}
+                    {hasVotedForCandidate(candidate.id, 0) && <span className="text-green-600 mr-3">✓ Voted MVP</span>}
+                    {hasVotedForCandidate(candidate.id, 1) && <span className="text-red-600">✓ Voted Elimination</span>}
                   </div>
                 </div>
                 <div className="flex gap-2">
                   <Button
                     onClick={() => handleVote(candidate.id, 0)}
-                    disabled={
-                      voteLoading || 
-                      currentRound.status !== 'active' || 
-                      hasVotedForCandidate(candidate.id, 0)
-                    }
+                    disabled={voteLoading || currentRound.status !== 'active' || hasVotedForCandidate(candidate.id, 0)}
                     className={hasVotedForCandidate(candidate.id, 0) ? "bg-green-100 text-green-800" : ""}
                   >
                     {hasVotedForCandidate(candidate.id, 0) ? "Voted MVP" : "Vote MVP"}
                   </Button>
                   <Button
                     onClick={() => handleVote(candidate.id, 1)}
-                    disabled={
-                      voteLoading || 
-                      currentRound.status !== 'active' || 
-                      hasVotedForCandidate(candidate.id, 1)
-                    }
+                    disabled={voteLoading || currentRound.status !== 'active' || hasVotedForCandidate(candidate.id, 1)}
                     variant="secondary"
                     className={hasVotedForCandidate(candidate.id, 1) ? "bg-red-100 text-red-800" : ""}
                   >
@@ -264,13 +235,13 @@ export const VotingPage: React.FC<VoteProps> = ({ setActiveTabAction }) => {
               <p className="text-gray-600">No candidates available for voting</p>
             </div>
           )}
-          
+
           {voteError && (
             <div className="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
               {voteError}
             </div>
           )}
-          
+
           {voteLoading && (
             <div className="mt-4 p-3 bg-blue-100 border border-blue-400 text-blue-700 rounded">
               Processing your vote...
@@ -280,4 +251,4 @@ export const VotingPage: React.FC<VoteProps> = ({ setActiveTabAction }) => {
       </Card>
     </div>
   );
-}
+};
