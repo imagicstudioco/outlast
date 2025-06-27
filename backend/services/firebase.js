@@ -1,44 +1,79 @@
-const { db } = require('../config/firebase');
+const { db, admin } = require('../config/firebase');
 
-// Game Status Operations
-const getGameStatus = async () => {
+// =========================
+// Season Operations
+// =========================
+
+// Create a new season and archive the previous one
+const createSeason = async (seasonId, seasonData) => {
   try {
-    const gameStatusRef = db.collection('gameStatus').doc('current');
-    const doc = await gameStatusRef.get();
-    return doc.exists ? doc.data() : null;
+    const seasonRef = db.collection('seasons').doc(seasonId);
+    await seasonRef.set({
+      ...seasonData,
+      status: 'active',
+      createdAt: new Date()
+    });
+
+    const globalRef = db.collection('global').doc('currentSeason');
+    const currentDoc = await globalRef.get();
+
+    if (currentDoc.exists) {
+      const previousSeasonId = currentDoc.data().seasonId;
+      if (previousSeasonId) {
+        const prevSeasonRef = db.collection('seasons').doc(previousSeasonId);
+        await prevSeasonRef.update({ status: 'archived' });
+      }
+    }
+
+    await globalRef.set({ seasonId }, { merge: true });
+    return true;
   } catch (error) {
-    console.error('Error getting game status:', error);
+    console.error('Error creating new season:', error);
     throw error;
   }
+};
+
+// Get the current active season ID
+const getCurrentSeasonId = async () => {
+  const globalRef = db.collection('global').doc('currentSeason');
+  const doc = await globalRef.get();
+  return doc.exists ? doc.data().seasonId : null;
+};
+
+// =========================
+// Game Status Operations
+// =========================
+
+const getGameStatus = async () => {
+  const seasonId = await getCurrentSeasonId();
+  const ref = db.collection('seasons').doc(seasonId).collection('gameStatus').doc('current');
+  const doc = await ref.get();
+  return doc.exists ? doc.data() : null;
 };
 
 const updateGameStatus = async (status) => {
-  try {
-    const gameStatusRef = db.collection('gameStatus').doc('current');
-    await gameStatusRef.set(status, { merge: true });
-    return true;
-  } catch (error) {
-    console.error('Error updating game status:', error);
-    throw error;
-  }
+  const seasonId = await getCurrentSeasonId();
+  const ref = db.collection('seasons').doc(seasonId).collection('gameStatus').doc('current');
+  await ref.set(status, { merge: true });
+  return true;
 };
 
+// =========================
 // Voting Operations
+// =========================
+
 const getVotingData = async () => {
-  try {
-    const votingRef = db.collection('voting').doc('current');
-    const doc = await votingRef.get();
-    return doc.exists ? doc.data() : null;
-  } catch (error) {
-    console.error('Error getting voting data:', error);
-    throw error;
-  }
+  const seasonId = await getCurrentSeasonId();
+  const ref = db.collection('seasons').doc(seasonId).collection('voting').doc('current');
+  const doc = await ref.get();
+  return doc.exists ? doc.data() : null;
 };
 
 const submitVote = async (voterId, votedForId) => {
   try {
-    const votingRef = db.collection('voting').doc('current');
-    await votingRef.update({
+    const seasonId = await getCurrentSeasonId();
+    const ref = db.collection('seasons').doc(seasonId).collection('voting').doc('current');
+    await ref.update({
       votes: admin.firestore.FieldValue.arrayUnion({
         voterId,
         votedForId,
@@ -52,109 +87,106 @@ const submitVote = async (voterId, votedForId) => {
   }
 };
 
+// =========================
 // Leaderboard Operations
+// =========================
+
 const getLeaderboard = async () => {
-  try {
-    const leaderboardRef = db.collection('leaderboard');
-    const snapshot = await leaderboardRef.orderBy('score', 'desc').limit(100).get();
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-  } catch (error) {
-    console.error('Error getting leaderboard:', error);
-    throw error;
-  }
+  const seasonId = await getCurrentSeasonId();
+  const ref = db.collection('seasons').doc(seasonId).collection('leaderboard');
+  const snapshot = await ref.orderBy('score', 'desc').limit(100).get();
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 };
 
 const updatePlayerScore = async (playerId, score) => {
-  try {
-    const playerRef = db.collection('leaderboard').doc(playerId);
-    await playerRef.set({ score }, { merge: true });
-    return true;
-  } catch (error) {
-    console.error('Error updating player score:', error);
-    throw error;
-  }
+  const seasonId = await getCurrentSeasonId();
+  const ref = db.collection('seasons').doc(seasonId).collection('leaderboard').doc(playerId);
+  await ref.set({ score }, { merge: true });
+  return true;
 };
 
-// Profile Operations
+// =========================
+// Profile Operations (Global)
+// =========================
+
 const getPlayerProfile = async (playerId) => {
-  try {
-    const profileRef = db.collection('profiles').doc(playerId);
-    const doc = await profileRef.get();
-    return doc.exists ? doc.data() : null;
-  } catch (error) {
-    console.error('Error getting player profile:', error);
-    throw error;
-  }
+  const ref = db.collection('profiles').doc(playerId);
+  const doc = await ref.get();
+  return doc.exists ? doc.data() : null;
 };
 
 const updatePlayerProfile = async (playerId, profileData) => {
-  try {
-    const profileRef = db.collection('profiles').doc(playerId);
-    await profileRef.set(profileData, { merge: true });
-    return true;
-  } catch (error) {
-    console.error('Error updating player profile:', error);
-    throw error;
-  }
+  const ref = db.collection('profiles').doc(playerId);
+  await ref.set(profileData, { merge: true });
+  return true;
 };
 
+// =========================
 // Rewards Operations
+// =========================
+
 const getRewardsData = async () => {
-  try {
-    const rewardsRef = db.collection('rewards').doc('current');
-    const doc = await rewardsRef.get();
-    return doc.exists ? doc.data() : null;
-  } catch (error) {
-    console.error('Error getting rewards data:', error);
-    throw error;
-  }
+  const seasonId = await getCurrentSeasonId();
+  const ref = db.collection('seasons').doc(seasonId).collection('rewards').doc('current');
+  const doc = await ref.get();
+  return doc.exists ? doc.data() : null;
 };
 
 const updateRewardsData = async (rewardsData) => {
-  try {
-    const rewardsRef = db.collection('rewards').doc('current');
-    await rewardsRef.set(rewardsData, { merge: true });
-    return true;
-  } catch (error) {
-    console.error('Error updating rewards data:', error);
-    throw error;
-  }
+  const seasonId = await getCurrentSeasonId();
+  const ref = db.collection('seasons').doc(seasonId).collection('rewards').doc('current');
+  await ref.set(rewardsData, { merge: true });
+  return true;
 };
 
+// =========================
 // Game Rules Operations
+// =========================
+
 const getGameRules = async () => {
-  try {
-    const rulesRef = db.collection('gameRules').doc('current');
-    const doc = await rulesRef.get();
-    return doc.exists ? doc.data() : null;
-  } catch (error) {
-    console.error('Error getting game rules:', error);
-    throw error;
-  }
+  const seasonId = await getCurrentSeasonId();
+  const ref = db.collection('seasons').doc(seasonId).collection('gameRules').doc('current');
+  const doc = await ref.get();
+  return doc.exists ? doc.data() : null;
 };
 
 const updateGameRules = async (rules) => {
-  try {
-    const rulesRef = db.collection('gameRules').doc('current');
-    await rulesRef.set(rules, { merge: true });
-    return true;
-  } catch (error) {
-    console.error('Error updating game rules:', error);
-    throw error;
-  }
+  const seasonId = await getCurrentSeasonId();
+  const ref = db.collection('seasons').doc(seasonId).collection('gameRules').doc('current');
+  await ref.set(rules, { merge: true });
+  return true;
 };
 
+// =========================
+// Exports
+// =========================
+
 module.exports = {
+  // Season
+  createSeason,
+  getCurrentSeasonId,
+
+  // Game Status
   getGameStatus,
   updateGameStatus,
+
+  // Voting
   getVotingData,
   submitVote,
+
+  // Leaderboard
   getLeaderboard,
   updatePlayerScore,
+
+  // Profiles
   getPlayerProfile,
   updatePlayerProfile,
+
+  // Rewards
   getRewardsData,
   updateRewardsData,
+
+  // Game Rules
   getGameRules,
   updateGameRules
-}; 
+};

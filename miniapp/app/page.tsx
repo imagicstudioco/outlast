@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState, useCallback } from "react";
 import { Button } from "./components/Button";
 import { Icon } from "./components/Icon";
 import { HomePage } from "./components/HomePage";
+import { VotingPage } from "./components/VotingPage";
 import { useAccount, useConnect } from "wagmi";
 import { farcasterFrame } from '@farcaster/frame-wagmi-connector';
 
@@ -16,6 +17,7 @@ export default function App() {
   const [frameAdded, setFrameAdded] = useState(false);
   const { isConnected, address } = useAccount();
   const { connect } = useConnect();
+  const [activeTab, setActiveTabAction] = useState("landing");
 
   const { addFrame } = useAddFrame();
 
@@ -127,9 +129,9 @@ export default function App() {
           </div>
           <div>{saveFrameButton}</div>
         </header>
-
         <main className="flex-1">
-          <HomePage />
+        {activeTab === "landing" && <HomePage setActiveTabAction={setActiveTabAction} />}
+        {activeTab === "vote" && <VotingPage setActiveTabAction={setActiveTabAction} />}
         </main>
 
         <footer className="mt-2 pt-4 flex justify-center">
