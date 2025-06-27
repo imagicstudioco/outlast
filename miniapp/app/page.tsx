@@ -131,7 +131,7 @@ export default function App() {
         </header>
         <main className="flex-1">
         {activeTab === "landing" && <HomePage setActiveTabAction={setActiveTabAction} />}
-        {activeTab === "vote" && <VotingPage setActiveTabAction={setActiveTabAction} />}
+        {activeTab === "vote" && <VotingPage />}
         </main>
 
         <footer className="mt-2 pt-4 flex justify-center">

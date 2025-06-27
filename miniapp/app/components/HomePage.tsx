@@ -18,11 +18,11 @@ interface GameStatus {
   isActive: boolean;
 }
 
-interface HomeProps {
+interface HomePageProps {
   setActiveTabAction: (tab: string) => void;
 }
 
-export const HomePage = ({ setActiveTabAction }: HomeProps) => {
+export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
   const { isConnected } = useAccount();
 
   const [gameStatus, setGameStatus] = useState<GameStatus | null>(null);
