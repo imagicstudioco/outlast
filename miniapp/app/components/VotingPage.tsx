@@ -92,7 +92,7 @@ export const VotingPage: React.FC = () => {
     try {
       const hash = await walletClient.writeContract({
         address: CONTRACT_ADDRESS,
-        abi: OutlastGameABI.abi,
+        abi: OutlastGameABI,
         functionName: "castVote",
         args: [participantId, voteType],
       });
