@@ -1,9 +1,15 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Silence warnings
-  // https://github.com/WalletConnect/walletconnect-monorepo/issues/1908
   webpack: (config) => {
+    // Silence warnings for certain WalletConnect deps
     config.externals.push("pino-pretty", "lokijs", "encoding");
+
+    // Fix build crash on ES module worker
+    config.module.rules.push({
+      test: /HeartbeatWorker\.js$/,
+      type: 'javascript/esm',
+    });
+
     return config;
   },
 };
