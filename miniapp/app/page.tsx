@@ -196,7 +196,7 @@ export default function App() {
           {activeTab === "landing" && (
             <HomePage setActiveTabAction={setActiveTabAction} />
           )}
-          {activeTab === "results" && <Results setActiveTabAction={setActiveTabAction} />}
+          {activeTab === "results" && <Results />}
         </main>
 
         <footer className="mt-2 pt-4 flex justify-center">

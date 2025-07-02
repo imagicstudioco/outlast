@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useAccount } from "wagmi";
 import { Button } from "./Button";
 import { Card } from "./Card";
@@ -42,9 +42,8 @@ export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
     }
   };
 
-  const checkVoteStatus = async (walletAddress: string) => {
+  const checkVoteStatus = useCallback(async (walletAddress: string) => {
     if (!walletAddress) return;
-    
     setCheckingVoteStatus(true);
     try {
       const response = await fetch(`${API_BACKEND_URL}/api/voting/check-vote-status`, {
@@ -56,13 +55,11 @@ export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
           voterId: walletAddress
         }),
       });
-
       if (response.ok) {
         const data = await response.json();
         // Ensure hasVoted is a boolean
         const hasVoted = Boolean(data.hasVoted);
         setHasVoted(hasVoted);
-        
         // If user has already voted, redirect to results
         if (hasVoted) {
           setActiveTabAction("results");
@@ -76,7 +73,7 @@ export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
     } finally {
       setCheckingVoteStatus(false);
     }
-  };
+  }, [setActiveTabAction]);
 
   const handleVote = async (username: string, id: string) => {
     if (!isConnected || !address) {

@@ -19,16 +19,10 @@ interface Finalist {
   username: string;
 }
 
-interface ResultsProps {
-  setActiveTabAction: (tab: string) => void;
-}
-
-export const Results: React.FC<ResultsProps> = ({ setActiveTabAction }) => {
+export const Results: React.FC = () => {
   const [voteResults, setVoteResults] = useState<VoteResults | null>(null);
-  const [finalists, setFinalists] = useState<Finalist[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-
   // Mock finalists data (same as backend)
   const mockFinalists = [
     { id: "1", username: "@stokecity" },
@@ -62,8 +56,7 @@ export const Results: React.FC<ResultsProps> = ({ setActiveTabAction }) => {
 
   useEffect(() => {
     fetchVoteResults();
-    setFinalists(mockFinalists);
-  }, []);
+  }, [mockFinalists]);
 
   // Combine finalists with vote results
   const getFinalistsWithVotes = () => {
