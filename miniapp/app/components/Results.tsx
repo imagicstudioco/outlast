@@ -134,20 +134,6 @@ export const Results: React.FC<ResultsProps> = ({ setActiveTabAction }) => {
             </div>
           )}
           
-          <div className="mt-6 flex justify-center space-x-4">
-            <Button
-              onClick={() => setActiveTabAction("home")}
-              className="bg-blue-500 hover:bg-blue-600"
-            >
-              Back to Finalists
-            </Button>
-            <Button
-              onClick={fetchVoteResults}
-              className="bg-green-500 hover:bg-green-600"
-            >
-              Refresh Results
-            </Button>
-          </div>
         </Card>
       )}
     </div>
