@@ -163,33 +163,73 @@ const updateGameRules = async (rules) => {
 
 const getFinalistsList = async () => {
   try {
-    // Get current season ID
+    console.log('🔍 Fetching finalists list...');
+    
+    // First, try to get current season ID
     const seasonId = await getCurrentSeasonId();
+    console.log('Current season ID:', seasonId);
+    
     if (!seasonId) {
-      console.log('No active season found');
-      return [];
+      console.log('No active season found, trying global Finalists collection...');
+      // Fallback to global Finalists collection
+      const globalRef = db.collection('Finalists');
+      const globalSnapshot = await globalRef.get();
+      
+      if (globalSnapshot.empty) {
+        console.log('No finalists found in global collection');
+        return [];
+      }
+      
+      const finalists = globalSnapshot.docs.map(doc => ({
+        id: doc.id,
+        username: doc.data().username,
+        fid: doc.data().fid
+      }));
+      
+      console.log(`Found ${finalists.length} finalists in global collection`);
+      return finalists;
     }
     
-    // Fetch from season-based finalists collection
+    // Try season-based collection
     const ref = db.collection('seasons').doc(seasonId).collection('finalists');
     const snapshot = await ref.get();
     
     if (snapshot.empty) {
-      console.log('No finalists found in current season');
-      return [];
+      console.log('No finalists found in season collection, trying global...');
+      // Fallback to global collection
+      const globalRef = db.collection('Finalists');
+      const globalSnapshot = await globalRef.get();
+      
+      if (globalSnapshot.empty) {
+        console.log('No finalists found anywhere');
+        return [];
+      }
+      
+      const finalists = globalSnapshot.docs.map(doc => ({
+        id: doc.id,
+        username: doc.data().username,
+        fid: doc.data().fid
+      }));
+      
+      console.log(`Found ${finalists.length} finalists in global collection`);
+      return finalists;
     }
     
     const finalists = snapshot.docs.map(doc => ({
       id: doc.id,
       username: doc.data().username,
-      fid: doc.data().fid // This contains the image URL based on the JSON structure
+      fid: doc.data().fid
     }));
     
-    console.log(`Found ${finalists.length} finalists:`, finalists);
+    console.log(`Found ${finalists.length} finalists in season collection`);
     return finalists;
+    
   } catch (error) {
-    console.error('Error fetching finalists list:', error);
-    throw error;
+    console.error('❌ Error fetching finalists list:', error);
+    
+    // Return empty array instead of throwing to prevent app crash
+    console.log('Returning empty finalists list due to error');
+    return [];
   }
 };
 
