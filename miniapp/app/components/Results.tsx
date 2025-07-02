@@ -14,11 +14,8 @@ interface VoteResults {
   totalVotes: number;
 }
 
-interface ResultsProps {
-  setActiveTabAction: (tab: string) => void;
-}
+export const Results = () => {
 
-export const Results: React.FC<ResultsProps> = ({ setActiveTabAction }) => {
   const [voteResults, setVoteResults] = useState<VoteResults | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
