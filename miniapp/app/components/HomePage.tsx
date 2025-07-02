@@ -21,6 +21,8 @@ export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [voting, setVoting] = useState<boolean>(false);
+  const [hasVoted, setHasVoted] = useState<boolean | undefined>(undefined);
+  const [checkingVoteStatus, setCheckingVoteStatus] = useState(false);
 
   const fetchFinalists = async () => {
     setLoading(true);
@@ -40,9 +42,52 @@ export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
     }
   };
 
+  const checkVoteStatus = async (walletAddress: string) => {
+    if (!walletAddress) return;
+    
+    setCheckingVoteStatus(true);
+    try {
+      const response = await fetch(`${API_BACKEND_URL}/api/voting/check-vote-status`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          voterId: walletAddress
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        // Ensure hasVoted is a boolean
+        const hasVoted = Boolean(data.hasVoted);
+        setHasVoted(hasVoted);
+        
+        // If user has already voted, redirect to results
+        if (hasVoted) {
+          setActiveTabAction("results");
+        }
+      } else {
+        setHasVoted(false);
+      }
+    } catch (error) {
+      console.error('Error checking vote status:', error);
+      setHasVoted(false);
+    } finally {
+      setCheckingVoteStatus(false);
+    }
+  };
+
   const handleVote = async (username: string, id: string) => {
     if (!isConnected || !address) {
       alert("Please connect your wallet first");
+      return;
+    }
+
+    // Double-check vote status before allowing vote
+    if (hasVoted) {
+      alert("You have already voted. Redirecting to results...");
+      setActiveTabAction("results");
       return;
     }
 
@@ -68,7 +113,8 @@ export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
       const result = await response.json();
       console.log(`Vote submitted successfully for ${result.votedFor}`);
       
-      // Navigate to results page
+      // Mark as voted and navigate to results page
+      setHasVoted(true);
       setActiveTabAction("results");
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : "Unknown error";
@@ -79,9 +125,62 @@ export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
     }
   };
 
+  // Check vote status when wallet connects or changes
+  useEffect(() => {
+    if (isConnected && address) {
+      checkVoteStatus(address);
+    } else {
+      setHasVoted(undefined);
+    }
+  }, [isConnected, address]);
+
   useEffect(() => {
     fetchFinalists();
   }, []);
+
+  // Show loading while checking vote status
+  if (checkingVoteStatus) {
+    return (
+      <div className="space-y-6 animate-fade-in p-6">
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold mb-2">Finalists</h1>
+          <p className="text-gray-600">Vote for your favorite finalist</p>
+        </div>
+        <Card className="p-6 text-center">
+          <div className="flex items-center justify-center">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+              <p className="text-gray-600">Checking your vote status...</p>
+            </div>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  // Show message if user has already voted
+  if (hasVoted) {
+    return (
+      <div className="space-y-6 animate-fade-in p-6">
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold mb-2">Finalists</h1>
+          <p className="text-gray-600">Vote for your favorite finalist</p>
+        </div>
+        <Card className="p-6 text-center">
+          <h2 className="text-2xl font-semibold mb-4">You Have Already Voted</h2>
+          <p className="text-gray-600 mb-4">
+            You have already cast your vote. Redirecting to results...
+          </p>
+          <Button
+            onClick={() => setActiveTabAction("results")}
+            className="bg-blue-500 hover:bg-blue-600"
+          >
+            View Results
+          </Button>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in p-6">
@@ -133,10 +232,10 @@ export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
                   </div>
                   <Button
                     onClick={() => handleVote(finalist.username, finalist.id)}
-                    disabled={voting}
+                    disabled={voting || Boolean(hasVoted)}
                     className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 disabled:opacity-50"
                   >
-                    {voting ? "Voting..." : "Vote"}
+                    {voting ? "Voting..." : hasVoted ? "Already Voted" : "Vote"}
                   </Button>
                 </div>
               ))

@@ -14,11 +14,30 @@ interface VoteResults {
   totalVotes: number;
 }
 
-export const Results = () => {
+interface Finalist {
+  id: string;
+  username: string;
+}
 
+interface ResultsProps {
+  setActiveTabAction: (tab: string) => void;
+}
+
+export const Results: React.FC<ResultsProps> = ({ setActiveTabAction }) => {
   const [voteResults, setVoteResults] = useState<VoteResults | null>(null);
+  const [finalists, setFinalists] = useState<Finalist[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Mock finalists data (same as backend)
+  const mockFinalists = [
+    { id: "1", username: "@stokecity" },
+    { id: "2", username: "@baronmeyang" },
+    { id: "3", username: "@glowry" },
+    { id: "4", username: "@supersia" },
+    { id: "5", username: "@lianta" },
+    { id: "6", username: "@rafikithefirst" }
+  ];
 
   const fetchVoteResults = async () => {
     setLoading(true);
@@ -43,7 +62,23 @@ export const Results = () => {
 
   useEffect(() => {
     fetchVoteResults();
+    setFinalists(mockFinalists);
   }, []);
+
+  // Combine finalists with vote results
+  const getFinalistsWithVotes = () => {
+    if (!voteResults) return mockFinalists.map(finalist => ({ ...finalist, votes: 0 }));
+
+    const voteMap = new Map();
+    voteResults.results.forEach(result => {
+      voteMap.set(result.id, result.votes);
+    });
+
+    return mockFinalists.map(finalist => ({
+      ...finalist,
+      votes: voteMap.get(finalist.id) || 0
+    })).sort((a, b) => b.votes - a.votes);
+  };
 
   return (
     <div className="space-y-6 animate-fade-in p-6">
@@ -83,53 +118,42 @@ export const Results = () => {
       )}
 
       {/* Results Content */}
-      {!loading && !error && voteResults && (
+      {!loading && !error && (
         <Card className="p-6">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-semibold">Current Results</h2>
             <div className="text-sm text-gray-600">
-              Total Votes: {voteResults.totalVotes}
+              Total Votes: {voteResults?.totalVotes || 0}
             </div>
           </div>
           
-          {voteResults.results.length > 0 ? (
-            <div className="space-y-4">
-              {voteResults.results.map((result, index) => (
-                <div
-                  key={result.id}
-                  className="flex justify-between items-center p-4 bg-gray-50 rounded-lg border"
-                >
-                  <div className="flex items-center space-x-4">
-                    <span className="text-lg font-medium text-gray-900">
-                      #{index + 1}
-                    </span>
-                    <span className="text-lg font-semibold">
-                      {result.username}
-                    </span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <span className="text-lg font-bold text-blue-600">
-                      {result.votes} votes
-                    </span>
-                    {voteResults.totalVotes > 0 && (
-                      <span className="text-sm text-gray-500">
-                        ({((result.votes / voteResults.totalVotes) * 100).toFixed(1)}%)
-                      </span>
-                    )}
-                  </div>
+          <div className="space-y-4">
+            {getFinalistsWithVotes().map((finalist, index) => (
+              <div
+                key={finalist.id}
+                className="flex justify-between items-center p-4 bg-gray-50 rounded-lg border"
+              >
+                <div className="flex items-center space-x-4">
+                  <span className="text-lg font-medium text-gray-900">
+                    #{index + 1}
+                  </span>
+                  <span className="text-lg font-semibold">
+                    {finalist.username}
+                  </span>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <p className="text-gray-600 text-lg mb-4">
-                No votes have been cast yet
-              </p>
-              <p className="text-sm text-gray-500">
-                Be the first to vote for your favorite finalist!
-              </p>
-            </div>
-          )}
+                <div className="flex items-center space-x-2">
+                  <span className={`text-lg font-bold ${finalist.votes > 0 ? 'text-blue-600' : 'text-gray-400'}`}>
+                    {finalist.votes} votes
+                  </span>
+                  {(voteResults?.totalVotes || 0) > 0 && (
+                    <span className="text-sm text-gray-500">
+                      ({((finalist.votes / (voteResults?.totalVotes || 1)) * 100).toFixed(1)}%)
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         </Card>
       )}
     </div>
