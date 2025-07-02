@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Card } from "./Card";
 import { Button } from "./Button";
 import { API_BACKEND_URL } from "../config";
@@ -14,24 +14,22 @@ interface VoteResults {
   totalVotes: number;
 }
 
-interface Finalist {
-  id: string;
-  username: string;
-}
+
 
 export const Results: React.FC = () => {
   const [voteResults, setVoteResults] = useState<VoteResults | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  
   // Mock finalists data (same as backend)
-  const mockFinalists = [
+  const mockFinalists = useMemo(() => [
     { id: "1", username: "@stokecity" },
     { id: "2", username: "@baronmeyang" },
     { id: "3", username: "@glowry" },
     { id: "4", username: "@supersia" },
     { id: "5", username: "@lianta" },
     { id: "6", username: "@rafikithefirst" }
-  ];
+  ], []);
 
   const fetchVoteResults = async () => {
     setLoading(true);
