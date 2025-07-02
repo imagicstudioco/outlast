@@ -11,15 +11,10 @@ interface Finalist {
   fid: string;
 }
 
-interface HomePageProps {
-  setActiveTabAction: (tab: string) => void;
-}
-
-export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
+export const HomePage: React.FC = () => {
   const { isConnected } = useAccount();
-
   const [finalists, setFinalists] = useState<Finalist[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchFinalists = async () => {
@@ -27,7 +22,6 @@ export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
     setError(null);
     try {
       const response = await fetch(`${API_BACKEND_URL}/finalists-list`);
-      
       if (!response.ok) throw new Error("Failed to fetch finalists list");
 
       const data = await response.json();
@@ -42,9 +36,7 @@ export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
   };
 
   const handleVote = (username: string) => {
-    // Handle vote logic here
     console.log(`Voting for ${username}`);
-    // You can implement the actual voting logic or navigate to a voting page
   };
 
   useEffect(() => {
@@ -53,31 +45,24 @@ export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
 
   return (
     <div className="space-y-6 animate-fade-in p-6">
-      {/* Header */}
       <div className="text-center mb-8">
         <h1 className="text-4xl font-bold mb-2">Finalists</h1>
-        <p className="text-gray-600">
-          Vote for your favorite finalist
-        </p>
+        <p className="text-gray-600">Vote for your favorite finalist</p>
       </div>
 
-      {/* Loader */}
       {loading && (
         <Card className="p-6 text-center">
           <div className="animate-pulse space-y-4">
-            <div className="h-6 bg-gray-200 rounded"></div>
-            <div className="h-4 bg-gray-200 rounded"></div>
-            <div className="h-4 bg-gray-200 rounded"></div>
+            <div className="h-6 bg-gray-200 rounded" />
+            <div className="h-4 bg-gray-200 rounded" />
+            <div className="h-4 bg-gray-200 rounded" />
           </div>
         </Card>
       )}
 
-      {/* Error */}
       {error && (
         <Card className="p-6 text-center">
-          <p className="text-red-500 font-semibold mb-2">
-            Error loading finalists
-          </p>
+          <p className="text-red-500 font-semibold mb-2">Error loading finalists</p>
           <p className="text-sm text-gray-500 mb-4">{error}</p>
           <Button
             onClick={fetchFinalists}
@@ -88,7 +73,6 @@ export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
         </Card>
       )}
 
-      {/* Finalists List */}
       {!loading && !error && (
         <Card className="p-6">
           <h2 className="text-2xl font-semibold mb-6">Finalists List</h2>
@@ -126,12 +110,9 @@ export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
         </Card>
       )}
 
-      {/* Wallet Connection */}
       {!isConnected && (
         <Card className="p-6 text-center">
-          <h2 className="text-2xl font-semibold mb-4">
-            Connect Your Wallet
-          </h2>
+          <h2 className="text-2xl font-semibold mb-4">Connect Your Wallet</h2>
           <p className="text-gray-600 mb-4">
             Connect your wallet to vote for finalists
           </p>

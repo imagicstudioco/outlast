@@ -1,0 +1,32 @@
+[
+  {
+    "id": 1,
+    "username": "alphauser",
+    "fid": 12345
+  },
+  {
+    "id": 2,
+    "username": "betaguy",
+    "fid": 67890
+  },
+  {
+    "id": 3,
+    "username": "charlie_dev",
+    "fid": 11223
+  },
+  {
+    "id": 4,
+    "username": "delta_coder",
+    "fid": 44556
+  },
+  {
+    "id": 5,
+    "username": "echo_test",
+    "fid": 77889
+  },
+  {
+    "id": 6,
+    "username": "foxtrot_user",
+    "fid": 99001
+  }
+]
