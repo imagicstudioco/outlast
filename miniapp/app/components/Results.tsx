@@ -133,7 +133,6 @@ export const Results: React.FC<ResultsProps> = ({ setActiveTabAction }) => {
               </p>
             </div>
           )}
-          
         </Card>
       )}
     </div>

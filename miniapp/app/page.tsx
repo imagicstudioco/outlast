@@ -19,7 +19,6 @@ export default function App() {
   const { isConnected, address } = useAccount();
   const { connect } = useConnect();
   const [activeTab, setActiveTabAction] = useState("landing");
-  const [hasVoted, setHasVoted] = useState<boolean | null>(null);
   const [checkingVoteStatus, setCheckingVoteStatus] = useState(false);
 
   const { addFrame } = useAddFrame();
@@ -43,7 +42,6 @@ export default function App() {
 
       if (response.ok) {
         const data = await response.json();
-        setHasVoted(data.hasVoted);
         
         // Auto-navigate based on vote status
         if (data.hasVoted) {
@@ -53,13 +51,11 @@ export default function App() {
         }
       } else {
         // If endpoint doesn't exist, assume not voted
-        setHasVoted(false);
         setActiveTabAction("landing");
       }
     } catch (error) {
       console.error('Error checking vote status:', error);
       // On error, assume not voted
-      setHasVoted(false);
       setActiveTabAction("landing");
     } finally {
       setCheckingVoteStatus(false);
@@ -91,7 +87,6 @@ export default function App() {
     if (isConnected && address) {
       checkVoteStatus(address);
     } else {
-      setHasVoted(null);
       setActiveTabAction("landing");
     }
   }, [isConnected, address, checkVoteStatus]);
