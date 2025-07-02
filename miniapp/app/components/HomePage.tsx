@@ -11,7 +11,11 @@ interface Finalist {
   fid: string;
 }
 
-export const HomePage: React.FC = () => {
+interface HomePageProps {
+  setActiveTabAction: (tab: string) => void;
+}
+
+export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
   const { isConnected } = useAccount();
   const [finalists, setFinalists] = useState<Finalist[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,6 +41,7 @@ export const HomePage: React.FC = () => {
 
   const handleVote = (username: string) => {
     console.log(`Voting for ${username}`);
+    setActiveTabAction("results"); // switch tab to 'results' on vote
   };
 
   useEffect(() => {
@@ -53,9 +58,9 @@ export const HomePage: React.FC = () => {
       {loading && (
         <Card className="p-6 text-center">
           <div className="animate-pulse space-y-4">
-            <div className="h-6 bg-gray-200 rounded" />
-            <div className="h-4 bg-gray-200 rounded" />
-            <div className="h-4 bg-gray-200 rounded" />
+            <div className="h-6 bg-gray-200 rounded"></div>
+            <div className="h-4 bg-gray-200 rounded"></div>
+            <div className="h-4 bg-gray-200 rounded"></div>
           </div>
         </Card>
       )}

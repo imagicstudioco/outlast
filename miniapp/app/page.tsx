@@ -17,7 +17,7 @@ export default function App() {
   const [frameAdded, setFrameAdded] = useState(false);
   const { isConnected, address } = useAccount();
   const { connect } = useConnect();
-  const [activeTab] = useState("landing"); // Only read, no setter used
+  const [activeTab, setActiveTabAction] = useState("landing");
 
   const { addFrame } = useAddFrame();
   const frameConnector = useMemo(() => farcasterFrame(), []);
@@ -128,7 +128,9 @@ export default function App() {
         </header>
 
         <main className="flex-1">
-          {activeTab === "landing" && <HomePage />}
+          {activeTab === "landing" && (
+            <HomePage setActiveTabAction={setActiveTabAction} />
+          )}
           {activeTab === "results" && <Results />}
         </main>
 
