@@ -27,16 +27,18 @@ export const Results: React.FC<ResultsProps> = ({ setActiveTabAction }) => {
     setLoading(true);
     setError(null);
     try {
+      console.log('📊 Fetching vote results...');
       const response = await fetch(`${API_BACKEND_URL}/api/voting/vote-results`);
       
       if (!response.ok) throw new Error("Failed to fetch vote results");
 
       const data = await response.json();
+      console.log('✅ Vote results received:', data);
       setVoteResults(data);
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : "Unknown error";
       setError(errMsg);
-      console.error(errMsg);
+      console.error('❌ Error fetching vote results:', errMsg);
     } finally {
       setLoading(false);
     }
@@ -126,15 +128,24 @@ export const Results: React.FC<ResultsProps> = ({ setActiveTabAction }) => {
               <p className="text-gray-600 text-lg mb-4">
                 No votes have been cast yet
               </p>
+              <p className="text-sm text-gray-500">
+                Be the first to vote for your favorite finalist!
+              </p>
             </div>
           )}
           
-          <div className="mt-6 text-center">
+          <div className="mt-6 flex justify-center space-x-4">
             <Button
               onClick={() => setActiveTabAction("home")}
               className="bg-blue-500 hover:bg-blue-600"
             >
               Back to Finalists
+            </Button>
+            <Button
+              onClick={fetchVoteResults}
+              className="bg-green-500 hover:bg-green-600"
+            >
+              Refresh Results
             </Button>
           </div>
         </Card>

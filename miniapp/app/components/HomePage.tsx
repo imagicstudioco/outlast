@@ -16,10 +16,11 @@ interface HomePageProps {
 }
 
 export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
-  const { isConnected } = useAccount();
+  const { isConnected, address } = useAccount();
   const [finalists, setFinalists] = useState<Finalist[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [voting, setVoting] = useState<boolean>(false);
 
   const fetchFinalists = async () => {
     setLoading(true);
@@ -39,9 +40,43 @@ export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
     }
   };
 
-  const handleVote = (username: string, id: string) => {
-    console.log(`Voting for ${username} with ID ${id}`);
-    setActiveTabAction("results");
+  const handleVote = async (username: string, id: string) => {
+    if (!isConnected || !address) {
+      alert("Please connect your wallet first");
+      return;
+    }
+
+    setVoting(true);
+    try {
+      const response = await fetch(`${API_BACKEND_URL}/api/voting/submit-vote`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          voterId: address,
+          votedForId: id,
+          username: username
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to submit vote");
+      }
+
+      const result = await response.json();
+      console.log(`Vote submitted successfully for ${result.votedFor}`);
+      
+      // Navigate to results page
+      setActiveTabAction("results");
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : "Unknown error";
+      alert(`Vote failed: ${errMsg}`);
+      console.error(errMsg);
+    } finally {
+      setVoting(false);
+    }
   };
 
   useEffect(() => {
@@ -98,9 +133,10 @@ export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
                   </div>
                   <Button
                     onClick={() => handleVote(finalist.username, finalist.id)}
-                    className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2"
+                    disabled={voting}
+                    className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 disabled:opacity-50"
                   >
-                    Vote
+                    {voting ? "Voting..." : "Vote"}
                   </Button>
                 </div>
               ))
