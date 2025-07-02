@@ -72,22 +72,6 @@ try {
 const db = admin.firestore();
 const auth = admin.auth();
 
-// Test the connection
-const testConnection = async () => {
-  try {
-    console.log('🔍 Testing Firebase connection...');
-    const testRef = db.collection('_test_connection');
-    await testRef.limit(1).get();
-    console.log('✅ Firebase connection test successful');
-  } catch (error) {
-    console.error('❌ Firebase connection test failed:', error);
-    throw error;
-  }
-};
-
-// Run connection test
-testConnection().catch(console.error);
-
 module.exports = {
   admin,
   db,

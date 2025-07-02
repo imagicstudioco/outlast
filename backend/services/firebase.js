@@ -182,8 +182,7 @@ const getFinalistsList = async () => {
       
       const finalists = globalSnapshot.docs.map(doc => ({
         id: doc.id,
-        username: doc.data().username,
-        fid: doc.data().fid
+        username: doc.data().username
       }));
       
       console.log(`Found ${finalists.length} finalists in global collection`);
@@ -207,8 +206,7 @@ const getFinalistsList = async () => {
       
       const finalists = globalSnapshot.docs.map(doc => ({
         id: doc.id,
-        username: doc.data().username,
-        fid: doc.data().fid
+        username: doc.data().username
       }));
       
       console.log(`Found ${finalists.length} finalists in global collection`);
@@ -217,8 +215,7 @@ const getFinalistsList = async () => {
     
     const finalists = snapshot.docs.map(doc => ({
       id: doc.id,
-      username: doc.data().username,
-      fid: doc.data().fid
+      username: doc.data().username
     }));
     
     console.log(`Found ${finalists.length} finalists in season collection`);

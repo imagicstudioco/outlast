@@ -9,7 +9,6 @@ import { API_BACKEND_URL } from "../config";
 interface Finalist {
   id: string;
   username: string;
-  fid: string; // This is actually an image URL
 }
 
 interface HomePageProps {
