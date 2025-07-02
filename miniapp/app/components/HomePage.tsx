@@ -6,16 +6,9 @@ import { Button } from "./Button";
 import { Card } from "./Card";
 import { API_BACKEND_URL } from "../config";
 
-interface LeaderboardPlayer {
-  address: string;
-  score: number;
-}
-
-interface GameStatus {
-  currentRound: number;
-  totalPlayers: number;
-  timeRemaining: string;
-  isActive: boolean;
+interface Finalist {
+  username: string;
+  fid: string;
 }
 
 interface HomePageProps {
@@ -25,28 +18,20 @@ interface HomePageProps {
 export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
   const { isConnected } = useAccount();
 
-  const [gameStatus, setGameStatus] = useState<GameStatus | null>(null);
-  const [leaderboard, setLeaderboard] = useState<LeaderboardPlayer[]>([]);
+  const [finalists, setFinalists] = useState<Finalist[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchGameData = async () => {
+  const fetchFinalists = async () => {
     setLoading(true);
     setError(null);
     try {
-      const [statusRes, leaderboardRes] = await Promise.all([
-        fetch(`${API_BACKEND_URL}/api/game/status`),
-        fetch(`${API_BACKEND_URL}/api/leaderboard`),
-      ]);
+      const response = await fetch(`${API_BACKEND_URL}/finalists-list`);
+      
+      if (!response.ok) throw new Error("Failed to fetch finalists list");
 
-      if (!statusRes.ok) throw new Error("Failed to fetch game status");
-      if (!leaderboardRes.ok) throw new Error("Failed to fetch leaderboard");
-
-      const statusData = await statusRes.json();
-      const leaderboardData = await leaderboardRes.json();
-
-      setGameStatus(statusData);
-      setLeaderboard(leaderboardData);
+      const data = await response.json();
+      setFinalists(data);
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : "Unknown error";
       setError(errMsg);
@@ -56,17 +41,23 @@ export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
     }
   };
 
+  const handleVote = (username: string) => {
+    // Handle vote logic here
+    console.log(`Voting for ${username}`);
+    // You can implement the actual voting logic or navigate to a voting page
+  };
+
   useEffect(() => {
-    fetchGameData();
+    fetchFinalists();
   }, []);
 
   return (
     <div className="space-y-6 animate-fade-in p-6">
       {/* Header */}
       <div className="text-center mb-8">
-        <h1 className="text-4xl font-bold mb-2">Welcome To Outlast</h1>
+        <h1 className="text-4xl font-bold mb-2">Finalists</h1>
         <p className="text-gray-600">
-          The ultimate survival game on the blockchain
+          Vote for your favorite finalist
         </p>
       </div>
 
@@ -85,11 +76,11 @@ export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
       {error && (
         <Card className="p-6 text-center">
           <p className="text-red-500 font-semibold mb-2">
-            Error loading game data
+            Error loading finalists
           </p>
           <p className="text-sm text-gray-500 mb-4">{error}</p>
           <Button
-            onClick={fetchGameData}
+            onClick={fetchFinalists}
             className="bg-red-500 hover:bg-red-600"
           >
             Retry
@@ -97,68 +88,42 @@ export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
         </Card>
       )}
 
-      {/* Main Content */}
+      {/* Finalists List */}
       {!loading && !error && (
-        <>
-          {/* Game Status */}
-          <Card className="p-6">
-            <h2 className="text-2xl font-semibold mb-4">Current Game Status</h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <StatusItem label="Round" value={gameStatus?.currentRound} />
-              <StatusItem label="Players" value={gameStatus?.totalPlayers} />
-              <StatusItem
-                label="Time Remaining"
-                value={gameStatus?.timeRemaining || "00:00:00"}
-              />
-              <StatusItem
-                label="Status"
-                value={gameStatus?.isActive ? "Active" : "Ended"}
-              />
-            </div>
-          </Card>
-
-          {/* Actions */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Voting */}
-            <Card className="p-6">
-              <h2 className="text-2xl font-semibold mb-4">Voting</h2>
-              <p className="text-gray-600 mb-4">
-                Cast your vote for the next round
-              </p>
-              <Button
-                onClick={() => setActiveTabAction("vote")}
-                className="w-full"
-              >
-                Vote Now
-              </Button>
-            </Card>
-
-            {/* Leaderboard */}
-            <Card className="p-6">
-              <h2 className="text-2xl font-semibold mb-4">Leaderboard</h2>
-              <div className="space-y-2 max-h-60 overflow-y-auto">
-                {leaderboard.length > 0 ? (
-                  leaderboard.map((player, index) => (
-                    <div
-                      key={player.address}
-                      className="flex justify-between items-center p-2 bg-gray-50 rounded"
-                    >
-                      <span className="font-medium truncate">
-                        #{index + 1} {player.address.slice(0, 6)}...
-                        {player.address.slice(-4)}
-                      </span>
-                      <span className="font-bold">{player.score} pts</span>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-gray-600">
-                    No players on leaderboard yet
-                  </p>
-                )}
+        <Card className="p-6">
+          <h2 className="text-2xl font-semibold mb-6">Finalists List</h2>
+          <div className="space-y-4">
+            {finalists.length > 0 ? (
+              finalists.map((finalist, index) => (
+                <div
+                  key={finalist.fid}
+                  className="flex justify-between items-center p-4 bg-gray-50 rounded-lg border"
+                >
+                  <div className="flex items-center space-x-4">
+                    <span className="text-lg font-medium text-gray-900">
+                      {index + 1}.
+                    </span>
+                    <span className="text-lg font-semibold">
+                      {finalist.username}
+                    </span>
+                  </div>
+                  <Button
+                    onClick={() => handleVote(finalist.username)}
+                    className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2"
+                  >
+                    Vote
+                  </Button>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-gray-600 text-lg">
+                  No finalists available at the moment
+                </p>
               </div>
-            </Card>
+            )}
           </div>
-        </>
+        </Card>
       )}
 
       {/* Wallet Connection */}
@@ -168,7 +133,7 @@ export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
             Connect Your Wallet
           </h2>
           <p className="text-gray-600 mb-4">
-            Connect your wallet to start playing
+            Connect your wallet to vote for finalists
           </p>
           <Button onClick={() => {}} className="w-full md:w-auto">
             Connect Wallet
@@ -178,17 +143,3 @@ export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
     </div>
   );
 };
-
-/* 🔥 Helper Component for Status Display */
-const StatusItem = ({
-  label,
-  value,
-}: {
-  label: string;
-  value: string | number | undefined;
-}) => (
-  <div className="text-center">
-    <p className="text-gray-600">{label}</p>
-    <p className="text-xl font-bold">{value ?? "N/A"}</p>
-  </div>
-);

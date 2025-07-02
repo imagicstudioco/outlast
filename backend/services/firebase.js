@@ -158,6 +158,76 @@ const updateGameRules = async (rules) => {
 };
 
 // =========================
+// Finalists Operations
+// =========================
+
+const getFinalistsList = async () => {
+  try {
+    const seasonId = await getCurrentSeasonId();
+    const ref = db.collection('seasons').doc(seasonId).collection('finalists');
+    const snapshot = await ref.get();
+    
+    if (snapshot.empty) {
+      return [];
+    }
+    
+    return snapshot.docs.map(doc => ({
+      username: doc.data().username,
+      fid: doc.data().fid
+    }));
+  } catch (error) {
+    console.error('Error fetching finalists list:', error);
+    throw error;
+  }
+};
+
+const getVoteResults = async () => {
+  try {
+    const seasonId = await getCurrentSeasonId();
+    const votingRef = db.collection('seasons').doc(seasonId).collection('voting').doc('current');
+    const votingDoc = await votingRef.get();
+    
+    if (!votingDoc.exists) {
+      return { results: [], totalVotes: 0 };
+    }
+    
+    const votingData = votingDoc.data();
+    const votes = votingData.votes || [];
+    
+    // Count votes for each finalist
+    const voteCounts = {};
+    votes.forEach(vote => {
+      voteCounts[vote.votedForId] = (voteCounts[vote.votedForId] || 0) + 1;
+    });
+    
+    // Get finalists to map FIDs to usernames
+    const finalistsRef = db.collection('seasons').doc(seasonId).collection('finalists');
+    const finalistsSnapshot = await finalistsRef.get();
+    const finalistsMap = {};
+    
+    finalistsSnapshot.docs.forEach(doc => {
+      const data = doc.data();
+      finalistsMap[data.fid] = data.username;
+    });
+    
+    // Create results array
+    const results = Object.entries(voteCounts).map(([fid, count]) => ({
+      username: finalistsMap[fid] || 'Unknown',
+      fid: fid,
+      votes: count
+    })).sort((a, b) => b.votes - a.votes);
+    
+    return {
+      results,
+      totalVotes: votes.length
+    };
+  } catch (error) {
+    console.error('Error fetching vote results:', error);
+    throw error;
+  }
+};
+
+// =========================
 // Exports
 // =========================
 
@@ -188,5 +258,11 @@ module.exports = {
 
   // Game Rules
   getGameRules,
-  updateGameRules
+  updateGameRules,
+
+  // Finalists
+  getFinalistsList,
+
+  // Vote Results
+  getVoteResults
 };
