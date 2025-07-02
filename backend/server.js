@@ -121,7 +121,7 @@ const votingRoutes = require('./routes/voting');
 const leaderboardRoutes = require('./routes/leaderboard');
 const profileRoutes = require('./routes/profile');
 const rewardsRoutes = require('./routes/rewards');
-const finalistsRoutes = require('./routes/finalists-list');
+const finalistsRoutes = require('./routes/finalists');
 
 // Root route
 app.get('/', (req, res) => {
