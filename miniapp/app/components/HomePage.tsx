@@ -25,7 +25,7 @@ export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${API_BACKEND_URL}/finalists-list`);
+      const response = await fetch(`${API_BACKEND_URL}/finalists`);
       if (!response.ok) throw new Error("Failed to fetch finalists list");
 
       const data = await response.json();
