@@ -11,6 +11,7 @@ import { HomePage } from "./components/HomePage";
 import { Results } from "./components/Results";
 import { useAccount, useConnect } from "wagmi";
 import { farcasterFrame } from '@farcaster/frame-wagmi-connector';
+import { API_BACKEND_URL } from "./config";
 
 export default function App() {
   const { setFrameReady, isFrameReady, context } = useMiniKit();
@@ -18,9 +19,52 @@ export default function App() {
   const { isConnected, address } = useAccount();
   const { connect } = useConnect();
   const [activeTab, setActiveTabAction] = useState("landing");
+  const [hasVoted, setHasVoted] = useState<boolean | null>(null);
+  const [checkingVoteStatus, setCheckingVoteStatus] = useState(false);
 
   const { addFrame } = useAddFrame();
   const frameConnector = useMemo(() => farcasterFrame(), []);
+
+  // Check if the connected wallet has voted
+  const checkVoteStatus = useCallback(async (walletAddress: string) => {
+    if (!walletAddress) return;
+    
+    setCheckingVoteStatus(true);
+    try {
+      const response = await fetch(`${API_BACKEND_URL}/api/voting/check-vote-status`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          voterId: walletAddress
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setHasVoted(data.hasVoted);
+        
+        // Auto-navigate based on vote status
+        if (data.hasVoted) {
+          setActiveTabAction("results");
+        } else {
+          setActiveTabAction("landing");
+        }
+      } else {
+        // If endpoint doesn't exist, assume not voted
+        setHasVoted(false);
+        setActiveTabAction("landing");
+      }
+    } catch (error) {
+      console.error('Error checking vote status:', error);
+      // On error, assume not voted
+      setHasVoted(false);
+      setActiveTabAction("landing");
+    } finally {
+      setCheckingVoteStatus(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (!isFrameReady) {
@@ -41,6 +85,16 @@ export default function App() {
     };
     autoConnect();
   }, [isConnected, connect, frameConnector]);
+
+  // Check vote status when wallet connects
+  useEffect(() => {
+    if (isConnected && address) {
+      checkVoteStatus(address);
+    } else {
+      setHasVoted(null);
+      setActiveTabAction("landing");
+    }
+  }, [isConnected, address, checkVoteStatus]);
 
   const handleAddFrame = useCallback(async () => {
     try {
@@ -93,6 +147,22 @@ export default function App() {
       console.error("Connection failed:", error);
     }
   }, [connect, frameConnector]);
+
+  // Show loading while checking vote status
+  if (checkingVoteStatus) {
+    return (
+      <div className="flex flex-col min-h-screen font-sans text-[var(--app-foreground)] mini-app-theme from-[var(--app-background)] to-[var(--app-gray)]">
+        <div className="w-full max-w-md mx-auto px-4 py-3">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+              <p className="text-gray-600">Checking your vote status...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col min-h-screen font-sans text-[var(--app-foreground)] mini-app-theme from-[var(--app-background)] to-[var(--app-gray)]">
