@@ -17,11 +17,9 @@ export default function App() {
   const [frameAdded, setFrameAdded] = useState(false);
   const { isConnected, address } = useAccount();
   const { connect } = useConnect();
-  const [activeTab, setActiveTabAction] = useState("landing");
+  const [activeTab] = useState("landing"); // Only read, no setter used
 
   const { addFrame } = useAddFrame();
-
-  // Initialize frame connector
   const frameConnector = useMemo(() => farcasterFrame(), []);
 
   useEffect(() => {
@@ -30,7 +28,6 @@ export default function App() {
     }
   }, [setFrameReady, isFrameReady]);
 
-  // Auto connect wallet on component mount
   useEffect(() => {
     const autoConnect = async () => {
       try {
@@ -48,7 +45,7 @@ export default function App() {
   const handleAddFrame = useCallback(async () => {
     try {
       console.log("Adding frame...");
-      const frameAdded = await addFrame({ 
+      const frameAdded = await addFrame({
         id: 'airtimeplus',
         title: 'AirtimePlus',
         description: 'Buy airtime with USDC',
@@ -129,9 +126,10 @@ export default function App() {
           </div>
           <div>{saveFrameButton}</div>
         </header>
+
         <main className="flex-1">
-        {activeTab === "landing" && <HomePage />}
-        {activeTab === "results" && <Results />}
+          {activeTab === "landing" && <HomePage />}
+          {activeTab === "results" && <Results />}
         </main>
 
         <footer className="mt-2 pt-4 flex justify-center">
