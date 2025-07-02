@@ -7,8 +7,9 @@ import { Card } from "./Card";
 import { API_BACKEND_URL } from "../config";
 
 interface Finalist {
+  id: string;
   username: string;
-  fid: string;
+  fid: string; // This is actually an image URL
 }
 
 interface HomePageProps {
@@ -39,9 +40,9 @@ export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
     }
   };
 
-  const handleVote = (username: string) => {
-    console.log(`Voting for ${username}`);
-    setActiveTabAction("results"); // switch tab to 'results' on vote
+  const handleVote = (username: string, id: string) => {
+    console.log(`Voting for ${username} with ID ${id}`);
+    setActiveTabAction("results");
   };
 
   useEffect(() => {
@@ -85,7 +86,7 @@ export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
             {finalists.length > 0 ? (
               finalists.map((finalist, index) => (
                 <div
-                  key={finalist.fid}
+                  key={finalist.id}
                   className="flex justify-between items-center p-4 bg-gray-50 rounded-lg border"
                 >
                   <div className="flex items-center space-x-4">
@@ -97,7 +98,7 @@ export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
                     </span>
                   </div>
                   <Button
-                    onClick={() => handleVote(finalist.username)}
+                    onClick={() => handleVote(finalist.username, finalist.id)}
                     className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2"
                   >
                     Vote

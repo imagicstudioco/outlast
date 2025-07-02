@@ -7,6 +7,12 @@ interface ResultsProps {
   setActiveTabAction: (tab: string) => void;
 }
 
+interface VoteResult {
+  username: string;
+  id: string;
+  votes: number;
+}
+
 export const Results: React.FC<ResultsProps> = ({ setActiveTabAction }) => {
   return (
     <div className="space-y-6 animate-fade-in p-6">

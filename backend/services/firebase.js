@@ -163,18 +163,30 @@ const updateGameRules = async (rules) => {
 
 const getFinalistsList = async () => {
   try {
-    // Fetch from global Finalists collection
-    const ref = db.collection('Finalists');
-    const snapshot = await ref.get();
-    
-    if (snapshot.empty) {
+    // Get current season ID
+    const seasonId = await getCurrentSeasonId();
+    if (!seasonId) {
+      console.log('No active season found');
       return [];
     }
     
-    return snapshot.docs.map(doc => ({
+    // Fetch from season-based finalists collection
+    const ref = db.collection('seasons').doc(seasonId).collection('finalists');
+    const snapshot = await ref.get();
+    
+    if (snapshot.empty) {
+      console.log('No finalists found in current season');
+      return [];
+    }
+    
+    const finalists = snapshot.docs.map(doc => ({
+      id: doc.id,
       username: doc.data().username,
-      fid: doc.data().fid
+      fid: doc.data().fid // This contains the image URL based on the JSON structure
     }));
+    
+    console.log(`Found ${finalists.length} finalists:`, finalists);
+    return finalists;
   } catch (error) {
     console.error('Error fetching finalists list:', error);
     throw error;
@@ -184,6 +196,10 @@ const getFinalistsList = async () => {
 const getVoteResults = async () => {
   try {
     const seasonId = await getCurrentSeasonId();
+    if (!seasonId) {
+      return { results: [], totalVotes: 0 };
+    }
+    
     const votingRef = db.collection('seasons').doc(seasonId).collection('voting').doc('current');
     const votingDoc = await votingRef.get();
     
@@ -200,20 +216,20 @@ const getVoteResults = async () => {
       voteCounts[vote.votedForId] = (voteCounts[vote.votedForId] || 0) + 1;
     });
     
-    // Get finalists to map FIDs to usernames
+    // Get finalists to map IDs to usernames
     const finalistsRef = db.collection('seasons').doc(seasonId).collection('finalists');
     const finalistsSnapshot = await finalistsRef.get();
     const finalistsMap = {};
     
     finalistsSnapshot.docs.forEach(doc => {
       const data = doc.data();
-      finalistsMap[data.fid] = data.username;
+      finalistsMap[doc.id] = data.username; // Use document ID as key
     });
     
     // Create results array
-    const results = Object.entries(voteCounts).map(([fid, count]) => ({
-      username: finalistsMap[fid] || 'Unknown',
-      fid: fid,
+    const results = Object.entries(voteCounts).map(([id, count]) => ({
+      username: finalistsMap[id] || 'Unknown',
+      id: id,
       votes: count
     })).sort((a, b) => b.votes - a.votes);
     
