@@ -135,6 +135,7 @@ app.use('/api/voting', votingRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/rewards', rewardsRoutes);
+app.use('/finalists-list', finalistsRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {

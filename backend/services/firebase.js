@@ -163,8 +163,8 @@ const updateGameRules = async (rules) => {
 
 const getFinalistsList = async () => {
   try {
-    const seasonId = await getCurrentSeasonId();
-    const ref = db.collection('seasons').doc(seasonId).collection('finalists');
+    // Fetch from global Finalists collection
+    const ref = db.collection('Finalists');
     const snapshot = await ref.get();
     
     if (snapshot.empty) {
