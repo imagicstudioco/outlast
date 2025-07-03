@@ -47,6 +47,7 @@ export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
 
       const data = await response.json();
       const voted = Boolean(data.hasVoted);
+      console.log("Vote status response:", { data, voted });
       setHasVoted(voted);
     } catch (err) {
       console.error("Error checking vote status", err);
@@ -105,7 +106,9 @@ export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
 
   // Separate useEffect to handle redirect when hasVoted changes
   useEffect(() => {
+    console.log("Redirect check:", { hasVoted, checkingStatus });
     if (hasVoted && !checkingStatus) {
+      console.log("Redirecting to results...");
       setActiveTabAction("results");
     }
   }, [hasVoted, checkingStatus, setActiveTabAction]);
