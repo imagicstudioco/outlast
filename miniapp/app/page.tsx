@@ -9,12 +9,12 @@ import { Button } from "./components/Button";
 import { Icon } from "./components/Icon";
 import { HomePage } from "./components/HomePage";
 import { Results } from "./components/Results";
-import { useAccount, useConnect, usePublicClient } from "wagmi";
+import { useAccount, useConnect } from "wagmi";
 import { farcasterFrame } from "@farcaster/frame-wagmi-connector";
 import { API_BACKEND_URL } from "./config";
 import { readContract } from "wagmi/actions";
 
-// ✅ Manual ERC721 ABI for `balanceOf`
+// ✅ ERC721 ABI (only balanceOf)
 const erc721ABI = [
   {
     constant: true,
@@ -32,7 +32,6 @@ export default function App() {
   const { setFrameReady, isFrameReady, context } = useMiniKit();
   const { isConnected, address } = useAccount();
   const { connect } = useConnect();
-  const publicClient = usePublicClient();
 
   const [frameAdded, setFrameAdded] = useState(false);
   const [activeTab, setActiveTabAction] = useState("landing");
@@ -64,48 +63,44 @@ export default function App() {
     autoConnect();
   }, [isConnected, connect, frameConnector]);
 
-  const checkStatus = useCallback(
-    async (walletAddress: string) => {
-      if (!walletAddress || !publicClient) return;
+  const checkStatus = useCallback(async (walletAddress: string) => {
+    if (!walletAddress) return;
 
-      setCheckingStatus(true);
+    setCheckingStatus(true);
 
-      try {
-        // ✅ Check NFT ownership
-        const balance = await readContract(publicClient, {
-          abi: erc721ABI,
-          address: NFT_CONTRACT_ADDRESS,
-          functionName: "balanceOf",
-          args: [walletAddress],
-        });
+    try {
+      // ✅ Check NFT ownership (viem-style)
+      const balance = await readContract({
+        abi: erc721ABI,
+        address: NFT_CONTRACT_ADDRESS,
+        functionName: "balanceOf",
+        args: [walletAddress],
+      });
 
-        const hasNFT = typeof balance === "bigint" && balance > 0n;
+      const hasNFT = typeof balance === "bigint" && balance > 0n;
 
-        // ✅ Check vote status via API
-        const response = await fetch(`${API_BACKEND_URL}/api/voting/status`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ voter: walletAddress }),
-        });
+      // ✅ Check vote status
+      const response = await fetch(`${API_BACKEND_URL}/api/voting/status`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ voter: walletAddress }),
+      });
 
-        const data = await response.json();
-        const hasVoted = Boolean(data.hasVoted);
+      const data = await response.json();
+      const hasVoted = Boolean(data.hasVoted);
 
-        // ✅ Redirect logic
-        if (!hasNFT || hasVoted) {
-          setActiveTabAction("results");
-        } else {
-          setActiveTabAction("landing");
-        }
-      } catch (error) {
-        console.error("Error checking NFT/vote status:", error);
+      if (!hasNFT || hasVoted) {
         setActiveTabAction("results");
-      } finally {
-        setCheckingStatus(false);
+      } else {
+        setActiveTabAction("landing");
       }
-    },
-    [publicClient]
-  );
+    } catch (error) {
+      console.error("Error checking NFT/vote status:", error);
+      setActiveTabAction("results");
+    } finally {
+      setCheckingStatus(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (isConnected && address) {
