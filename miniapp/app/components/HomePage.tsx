@@ -20,27 +20,25 @@ export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
   const [finalists, setFinalists] = useState<Finalist[]>([]);
   const [loading, setLoading] = useState(true);
   const [voting, setVoting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [hasVoted, setHasVoted] = useState<boolean>(false);
-  const [checkingStatus, setCheckingStatus] = useState<boolean>(false);
+  const [hasVoted, setHasVoted] = useState(false);
+  const [checkingStatus, setCheckingStatus] = useState(false);
 
-  // Fetch finalists
   const fetchFinalists = async () => {
     setLoading(true);
     try {
       const response = await fetch(`${API_BACKEND_URL}/finalists`);
       const data = await response.json();
       setFinalists(data);
-    } catch (error) {
-      setError("Failed to load finalists.");
+    } catch {
+      console.error("Failed to load finalists");
     } finally {
       setLoading(false);
     }
   };
 
-  // Check if wallet already voted
   const checkVoteStatus = useCallback(async () => {
     if (!address) return;
+
     setCheckingStatus(true);
     try {
       const response = await fetch(`${API_BACKEND_URL}/api/voting/status`, {
@@ -50,9 +48,10 @@ export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
       });
 
       const data = await response.json();
-      setHasVoted(Boolean(data.hasVoted));
+      const voted = Boolean(data.hasVoted);
+      setHasVoted(voted);
 
-      if (data.hasVoted) {
+      if (voted) {
         setActiveTabAction("results");
       }
     } catch (err) {
@@ -62,8 +61,7 @@ export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
     }
   }, [address, setActiveTabAction]);
 
-  // Cast vote
-  const handleVote = async (finalistId: string, username: string) => {
+  const handleVote = async (finalistId: string) => {
     if (!isConnected || !address) {
       alert("Please connect your wallet to vote.");
       return;
@@ -92,14 +90,13 @@ export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
       alert("✅ Vote submitted!");
       setActiveTabAction("results");
     } catch (error) {
+      console.error("❌ Vote failed", error);
       alert("❌ Vote failed.");
-      console.error(error);
     } finally {
       setVoting(false);
     }
   };
 
-  // Effects
   useEffect(() => {
     fetchFinalists();
   }, []);
@@ -127,15 +124,6 @@ export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
     );
   }
 
-  if (error) {
-    return (
-      <Card className="p-6 text-center">
-        <p className="text-red-500">{error}</p>
-        <Button onClick={fetchFinalists}>Retry</Button>
-      </Card>
-    );
-  }
-
   return (
     <div className="space-y-6 p-6 animate-fade-in">
       <div className="text-center mb-8">
@@ -159,7 +147,7 @@ export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
                 </span>
               </div>
               <Button
-                onClick={() => handleVote(finalist._id, finalist.username)}
+                onClick={() => handleVote(finalist._id)}
                 disabled={voting || hasVoted}
                 className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 disabled:opacity-50"
               >
