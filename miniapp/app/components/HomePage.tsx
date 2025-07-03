@@ -21,10 +21,9 @@ export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
   const [loading, setLoading] = useState(true);
   const [voting, setVoting] = useState(false);
   const [hasVoted, setHasVoted] = useState(false);
-  const [checkingStatus, setCheckingStatus] = useState(false);
+  const [checkingStatus, setCheckingStatus] = useState(true); // start true to wait for vote status
 
   const fetchFinalists = async () => {
-    setLoading(true);
     try {
       const response = await fetch(`${API_BACKEND_URL}/finalists`);
       const data = await response.json();
@@ -39,7 +38,6 @@ export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
   const checkVoteStatus = useCallback(async () => {
     if (!address) return;
 
-    setCheckingStatus(true);
     try {
       const response = await fetch(`${API_BACKEND_URL}/api/voting/status`, {
         method: "POST",
@@ -52,6 +50,7 @@ export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
       setHasVoted(voted);
 
       if (voted) {
+        // Redirect to results
         setActiveTabAction("results");
       }
     } catch (err) {
@@ -68,7 +67,7 @@ export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
     }
 
     if (hasVoted) {
-      alert("You have already voted.");
+      alert("You’ve already voted.");
       return;
     }
 
@@ -86,8 +85,8 @@ export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
         throw new Error(result.error || "Vote failed");
       }
 
-      setHasVoted(true);
       alert("✅ Vote submitted!");
+      setHasVoted(true);
       setActiveTabAction("results");
     } catch (error) {
       console.error("❌ Vote failed", error);
@@ -104,22 +103,16 @@ export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
   useEffect(() => {
     if (isConnected && address) {
       checkVoteStatus();
+    } else {
+      setCheckingStatus(false); // No address, skip check
     }
   }, [isConnected, address, checkVoteStatus]);
 
-  if (checkingStatus) {
+  if (checkingStatus || loading) {
     return (
       <Card className="p-6 text-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
-        <p className="text-gray-600">Checking your vote status...</p>
-      </Card>
-    );
-  }
-
-  if (loading) {
-    return (
-      <Card className="p-6 text-center">
-        <p>Loading finalists...</p>
+        <p className="text-gray-600">Preparing voting interface...</p>
       </Card>
     );
   }
