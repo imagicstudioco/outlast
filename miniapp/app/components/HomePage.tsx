@@ -21,7 +21,7 @@ export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
   const [loading, setLoading] = useState(true);
   const [voting, setVoting] = useState(false);
   const [hasVoted, setHasVoted] = useState(false);
-  const [checkingStatus, setCheckingStatus] = useState(true); // start true to wait for vote status
+  const [checkingStatus, setCheckingStatus] = useState(true);
 
   const fetchFinalists = async () => {
     try {
@@ -48,17 +48,12 @@ export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
       const data = await response.json();
       const voted = Boolean(data.hasVoted);
       setHasVoted(voted);
-
-      if (voted) {
-        // Redirect to results
-        setActiveTabAction("results");
-      }
     } catch (err) {
       console.error("Error checking vote status", err);
     } finally {
       setCheckingStatus(false);
     }
-  }, [address, setActiveTabAction]);
+  }, [address]);
 
   const handleVote = async (finalistId: string) => {
     if (!isConnected || !address) {
@@ -67,7 +62,7 @@ export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
     }
 
     if (hasVoted) {
-      alert("You’ve already voted.");
+      alert("You've already voted.");
       return;
     }
 
@@ -87,7 +82,7 @@ export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
 
       alert("✅ Vote submitted!");
       setHasVoted(true);
-      setActiveTabAction("results");
+      // Redirect will happen in the next useEffect due to hasVoted state change
     } catch (error) {
       console.error("❌ Vote failed", error);
       alert("❌ Vote failed.");
@@ -104,9 +99,16 @@ export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
     if (isConnected && address) {
       checkVoteStatus();
     } else {
-      setCheckingStatus(false); // No address, skip check
+      setCheckingStatus(false);
     }
   }, [isConnected, address, checkVoteStatus]);
+
+  // Separate useEffect to handle redirect when hasVoted changes
+  useEffect(() => {
+    if (hasVoted && !checkingStatus) {
+      setActiveTabAction("results");
+    }
+  }, [hasVoted, checkingStatus, setActiveTabAction]);
 
   if (checkingStatus || loading) {
     return (
