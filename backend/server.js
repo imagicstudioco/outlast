@@ -3,8 +3,8 @@ const dotenv = require('dotenv');
 const cors = require('cors');
 const connectDB = require('./config/db');
 
-const votingRoutes = require('./routes/votingRoutes');
-const finalistsRoutes = require('./routes/finalistsRoutes');
+const votingRoutes = require('./routes/voting');
+const finalistsRoutes = require('./routes/finalists');
 
 dotenv.config();
 connectDB();
