@@ -12,9 +12,8 @@ import { Results } from "./components/Results";
 import { useAccount, useConnect, usePublicClient } from "wagmi";
 import { farcasterFrame } from "@farcaster/frame-wagmi-connector";
 import { API_BACKEND_URL } from "./config";
-import { readContract } from "wagmi/actions";
 
-// ✅ Inline ERC721 ABI for `balanceOf`
+// ✅ ERC721 ABI for Viem-compatible usage
 const erc721ABI = [
   {
     constant: true,
@@ -46,9 +45,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!isFrameReady) {
-      setFrameReady();
-    }
+    if (!isFrameReady) setFrameReady();
   }, [isFrameReady, setFrameReady]);
 
   useEffect(() => {
@@ -71,8 +68,8 @@ export default function App() {
       setCheckingStatus(true);
 
       try {
-        // ✅ Correct readContract usage
-        const balance = await readContract(publicClient, {
+        // ✅ Correct usage with wagmi@2 + viem@2
+        const balance = await publicClient.readContract({
           abi: erc721ABI,
           address: NFT_CONTRACT_ADDRESS,
           functionName: "balanceOf",
@@ -82,13 +79,13 @@ export default function App() {
         const hasNFT = typeof balance === "bigint" && balance > 0n;
 
         // ✅ Check vote status
-        const response = await fetch(`${API_BACKEND_URL}/api/voting/status`, {
+        const res = await fetch(`${API_BACKEND_URL}/api/voting/status`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ voter: walletAddress }),
         });
 
-        const data = await response.json();
+        const data = await res.json();
         const hasVoted = Boolean(data.hasVoted);
 
         if (!hasNFT || hasVoted) {
@@ -96,8 +93,8 @@ export default function App() {
         } else {
           setActiveTabAction("landing");
         }
-      } catch (error) {
-        console.error("Error checking NFT or vote status:", error);
+      } catch (err) {
+        console.error("Error checking status:", err);
         setActiveTabAction("results");
       } finally {
         setCheckingStatus(false);
