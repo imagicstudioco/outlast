@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
 import { Button } from "./Button";
 import { Card } from "./Card";
@@ -13,15 +13,19 @@ interface Finalist {
 
 interface HomePageProps {
   setActiveTabAction: (tab: string) => void;
+  hasVoted: boolean;
+  onVoteSuccess: () => void;
 }
 
-export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
+export const HomePage: React.FC<HomePageProps> = ({ 
+  setActiveTabAction, 
+  hasVoted, 
+  onVoteSuccess 
+}) => {
   const { isConnected, address } = useAccount();
   const [finalists, setFinalists] = useState<Finalist[]>([]);
   const [loading, setLoading] = useState(true);
   const [voting, setVoting] = useState(false);
-  const [hasVoted, setHasVoted] = useState(false);
-  const [checkingStatus, setCheckingStatus] = useState(true);
 
   const fetchFinalists = async () => {
     try {
@@ -34,27 +38,6 @@ export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
       setLoading(false);
     }
   };
-
-  const checkVoteStatus = useCallback(async () => {
-    if (!address) return;
-
-    try {
-      const response = await fetch(`${API_BACKEND_URL}/api/voting/status`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ voter: address }),
-      });
-
-      const data = await response.json();
-      const voted = Boolean(data.hasVoted);
-      console.log("Vote status response:", { data, voted });
-      setHasVoted(voted);
-    } catch (err) {
-      console.error("Error checking vote status", err);
-    } finally {
-      setCheckingStatus(false);
-    }
-  }, [address]);
 
   const handleVote = async (finalistId: string) => {
     if (!isConnected || !address) {
@@ -69,6 +52,8 @@ export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
 
     setVoting(true);
     try {
+      console.log("Submitting vote for finalist:", finalistId);
+      
       const res = await fetch(`${API_BACKEND_URL}/api/voting/vote`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -76,14 +61,14 @@ export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
       });
 
       const result = await res.json();
+      console.log("Vote response:", result);
 
       if (!res.ok) {
         throw new Error(result.error || "Vote failed");
       }
 
       alert("✅ Vote submitted!");
-      setHasVoted(true);
-      // Redirect will happen in the next useEffect due to hasVoted state change
+      onVoteSuccess(); // This will update the parent state and redirect
     } catch (error) {
       console.error("❌ Vote failed", error);
       alert("❌ Vote failed.");
@@ -96,28 +81,20 @@ export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
     fetchFinalists();
   }, []);
 
+  // If user has already voted, they shouldn't see this page
+  // The parent component handles the redirect, but this is a safety check
   useEffect(() => {
-    if (isConnected && address) {
-      checkVoteStatus();
-    } else {
-      setCheckingStatus(false);
-    }
-  }, [isConnected, address, checkVoteStatus]);
-
-  // Separate useEffect to handle redirect when hasVoted changes
-  useEffect(() => {
-    console.log("Redirect check:", { hasVoted, checkingStatus });
-    if (hasVoted && !checkingStatus) {
-      console.log("Redirecting to results...");
+    if (hasVoted) {
+      console.log("User has voted, redirecting to results");
       setActiveTabAction("results");
     }
-  }, [hasVoted, checkingStatus, setActiveTabAction]);
+  }, [hasVoted, setActiveTabAction]);
 
-  if (checkingStatus || loading) {
+  if (loading) {
     return (
       <Card className="p-6 text-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
-        <p className="text-gray-600">Preparing voting interface...</p>
+        <p className="text-gray-600">Loading finalists...</p>
       </Card>
     );
   }

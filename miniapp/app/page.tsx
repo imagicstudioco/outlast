@@ -20,6 +20,7 @@ export default function App() {
   const { connect } = useConnect();
   const [activeTab, setActiveTabAction] = useState("landing");
   const [checkingVoteStatus, setCheckingVoteStatus] = useState(false);
+  const [hasVoted, setHasVoted] = useState(false);
 
   const { addFrame } = useAddFrame();
   const frameConnector = useMemo(() => farcasterFrame(), []);
@@ -30,36 +31,52 @@ export default function App() {
     
     setCheckingVoteStatus(true);
     try {
-      const response = await fetch(`${API_BACKEND_URL}/api/voting/check-vote-status`, {
+      console.log("Checking vote status for:", walletAddress);
+      
+      const response = await fetch(`${API_BACKEND_URL}/api/voting/status`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          voterId: walletAddress
+          voter: walletAddress
         }),
       });
 
       if (response.ok) {
         const data = await response.json();
+        const voted = Boolean(data.hasVoted);
+        console.log("Vote status response:", { data, voted });
+        
+        setHasVoted(voted);
         
         // Auto-navigate based on vote status
-        if (data.hasVoted) {
+        if (voted) {
+          console.log("User has voted, redirecting to results");
           setActiveTabAction("results");
         } else {
+          console.log("User hasn't voted, showing landing page");
           setActiveTabAction("landing");
         }
       } else {
-        // If endpoint doesn't exist, assume not voted
+        console.log("Vote status check failed, assuming not voted");
+        setHasVoted(false);
         setActiveTabAction("landing");
       }
     } catch (error) {
       console.error('Error checking vote status:', error);
-      // On error, assume not voted
+      setHasVoted(false);
       setActiveTabAction("landing");
     } finally {
       setCheckingVoteStatus(false);
     }
+  }, []);
+
+  // Handle successful vote from HomePage
+  const handleVoteSuccess = useCallback(() => {
+    console.log("Vote successful, updating state");
+    setHasVoted(true);
+    setActiveTabAction("results");
   }, []);
 
   useEffect(() => {
@@ -85,8 +102,11 @@ export default function App() {
   // Check vote status when wallet connects
   useEffect(() => {
     if (isConnected && address) {
+      console.log("Wallet connected, checking vote status");
       checkVoteStatus(address);
     } else {
+      console.log("Wallet not connected, showing landing page");
+      setHasVoted(false);
       setActiveTabAction("landing");
     }
   }, [isConnected, address, checkVoteStatus]);
@@ -194,7 +214,11 @@ export default function App() {
 
         <main className="flex-1">
           {activeTab === "landing" && (
-            <HomePage setActiveTabAction={setActiveTabAction} />
+            <HomePage 
+              setActiveTabAction={setActiveTabAction} 
+              hasVoted={hasVoted}
+              onVoteSuccess={handleVoteSuccess}
+            />
           )}
           {activeTab === "results" && <Results />}
         </main>
