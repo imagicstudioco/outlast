@@ -13,7 +13,18 @@ import { useAccount, useConnect, usePublicClient } from "wagmi";
 import { farcasterFrame } from "@farcaster/frame-wagmi-connector";
 import { API_BACKEND_URL } from "./config";
 import { readContract } from "wagmi/actions";
-import { erc721ABI } from "wagmi";
+
+// ✅ Manual ERC721 ABI for `balanceOf`
+const erc721ABI = [
+  {
+    constant: true,
+    inputs: [{ name: "owner", type: "address" }],
+    name: "balanceOf",
+    outputs: [{ name: "balance", type: "uint256" }],
+    type: "function",
+    stateMutability: "view",
+  },
+];
 
 const NFT_CONTRACT_ADDRESS = "0x9f4f7b2acff63c12d1ffa98feb16f9fdcc529113";
 
@@ -53,44 +64,48 @@ export default function App() {
     autoConnect();
   }, [isConnected, connect, frameConnector]);
 
-  const checkStatus = useCallback(async (walletAddress: string) => {
-    if (!walletAddress || !publicClient) return;
+  const checkStatus = useCallback(
+    async (walletAddress: string) => {
+      if (!walletAddress || !publicClient) return;
 
-    setCheckingStatus(true);
+      setCheckingStatus(true);
 
-    try {
-      // ✅ Check if user owns the NFT
-      const balance = await readContract(publicClient, {
-        abi: erc721ABI,
-        address: NFT_CONTRACT_ADDRESS,
-        functionName: "balanceOf",
-        args: [walletAddress],
-      });
+      try {
+        // ✅ Check NFT ownership
+        const balance = await readContract(publicClient, {
+          abi: erc721ABI,
+          address: NFT_CONTRACT_ADDRESS,
+          functionName: "balanceOf",
+          args: [walletAddress],
+        });
 
-      const hasNFT = typeof balance === "bigint" && balance > 0n;
+        const hasNFT = typeof balance === "bigint" && balance > 0n;
 
-      // ✅ Check vote status via API
-      const response = await fetch(`${API_BACKEND_URL}/api/voting/status`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ voter: walletAddress }),
-      });
+        // ✅ Check vote status via API
+        const response = await fetch(`${API_BACKEND_URL}/api/voting/status`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ voter: walletAddress }),
+        });
 
-      const data = await response.json();
-      const hasVoted = Boolean(data.hasVoted);
+        const data = await response.json();
+        const hasVoted = Boolean(data.hasVoted);
 
-      if (!hasNFT || hasVoted) {
+        // ✅ Redirect logic
+        if (!hasNFT || hasVoted) {
+          setActiveTabAction("results");
+        } else {
+          setActiveTabAction("landing");
+        }
+      } catch (error) {
+        console.error("Error checking NFT/vote status:", error);
         setActiveTabAction("results");
-      } else {
-        setActiveTabAction("landing");
+      } finally {
+        setCheckingStatus(false);
       }
-    } catch (error) {
-      console.error("Error checking status:", error);
-      setActiveTabAction("results");
-    } finally {
-      setCheckingStatus(false);
-    }
-  }, [publicClient]);
+    },
+    [publicClient]
+  );
 
   useEffect(() => {
     if (isConnected && address) {
