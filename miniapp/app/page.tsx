@@ -187,6 +187,9 @@ export default function App() {
     );
   }
 
+  // Move console.log outside of JSX
+  console.log("Rendering with activeTab:", activeTab, "hasVoted:", hasVoted);
+
   return (
     <div className="flex flex-col min-h-screen font-sans text-[var(--app-foreground)] mini-app-theme from-[var(--app-background)] to-[var(--app-gray)]">
       <div className="w-full max-w-md mx-auto px-4 py-3">
@@ -229,7 +232,6 @@ export default function App() {
             address: {address?.slice(0, 6)}...{address?.slice(-4)}
           </div>
           
-          {console.log("Rendering with activeTab:", activeTab, "hasVoted:", hasVoted)}
           {activeTab === "landing" && (
             <HomePage 
               setActiveTabAction={setActiveTabAction} 
