@@ -12,7 +12,7 @@ import { Results } from "./components/Results";
 import { useAccount, useConnect, usePublicClient } from "wagmi";
 import { farcasterFrame } from "@farcaster/frame-wagmi-connector";
 import { API_BACKEND_URL } from "./config";
-import { Contract, formatUnits } from "ethers";
+import { Contract } from "ethers";
 
 const NFT_CONTRACT_ADDRESS = "0x9f4f7b2acff63c12d1ffa98feb16f9fdcc529113";
 const NFT_ABI = [
