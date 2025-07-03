@@ -13,7 +13,7 @@ import { useAccount, useConnect, usePublicClient } from "wagmi";
 import { farcasterFrame } from "@farcaster/frame-wagmi-connector";
 import { API_BACKEND_URL } from "./config";
 
-// ✅ ERC721 ABI for Viem-compatible usage
+// ✅ ERC721 ABI
 const erc721ABI = [
   {
     constant: true,
@@ -68,7 +68,7 @@ export default function App() {
       setCheckingStatus(true);
 
       try {
-        // ✅ Correct usage with wagmi@2 + viem@2
+        // ✅ Read NFT balance
         const balance = await publicClient.readContract({
           abi: erc721ABI,
           address: NFT_CONTRACT_ADDRESS,
@@ -76,7 +76,7 @@ export default function App() {
           args: [walletAddress],
         });
 
-        const hasNFT = typeof balance === "bigint" && balance > 0n;
+        const hasNFT = typeof balance === "bigint" && balance > BigInt(0);
 
         // ✅ Check vote status
         const res = await fetch(`${API_BACKEND_URL}/api/voting/status`, {
