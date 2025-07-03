@@ -42,3 +42,36 @@ exports.castVote = async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 };
+
+// GET vote results
+exports.getVoteResults = async (req, res) => {
+  try {
+    const voting = await Voting.findOne({ seasonId: 'season_1' });
+
+    if (!voting) {
+      return res.json({ results: [], totalVotes: 0 });
+    }
+
+    const voteCounts = {};
+
+    for (const vote of voting.votes) {
+      if (!voteCounts[vote.votedFor]) {
+        voteCounts[vote.votedFor] = 0;
+      }
+      voteCounts[vote.votedFor]++;
+    }
+
+    const results = Object.entries(voteCounts).map(([id, votes]) => ({
+      id,
+      username: id, // or replace with actual mapping if needed
+      votes
+    }));
+
+    const totalVotes = voting.votes.length;
+
+    res.json({ results, totalVotes });
+  } catch (err) {
+    console.error("❌ Error getting vote results:", err);
+    res.status(500).json({ error: 'Server error' });
+  }
+};

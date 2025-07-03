@@ -1,7 +1,8 @@
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
-const User = require('./models/Finalists');
-const users = require('./finalists.json');
+const Finalist = require('./models/Finalists');
+const Voting = require('./models/Voting');
+const finalists = require('./finalists.json');
 
 dotenv.config();
 
@@ -9,10 +10,16 @@ mongoose.connect(process.env.MONGO_URI)
   .then(async () => {
     console.log('✅ MongoDB Connected');
 
-    await User.deleteMany(); // Clean existing
-    await User.insertMany(finalists); // Insert from data.json
+    // Clean and seed finalists
+    await Finalist.deleteMany();
+    await Finalist.insertMany(finalists);
+    console.log('✅ Finalists seeded');
 
-    console.log('🎉 Data seeded successfully');
+    // Clean votes
+    await Voting.deleteMany();
+    console.log('✅ Votes cleared');
+
+    console.log('🎉 Seeding completed');
     process.exit();
   })
   .catch(err => {
