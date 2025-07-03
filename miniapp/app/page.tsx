@@ -9,55 +9,30 @@ import { Button } from "./components/Button";
 import { Icon } from "./components/Icon";
 import { HomePage } from "./components/HomePage";
 import { Results } from "./components/Results";
-import { useAccount, useConnect } from "wagmi";
+import { useAccount, useConnect, usePublicClient } from "wagmi";
 import { farcasterFrame } from "@farcaster/frame-wagmi-connector";
 import { API_BACKEND_URL } from "./config";
+import { Contract, formatUnits } from "ethers";
+
+const NFT_CONTRACT_ADDRESS = "0x9f4f7b2acff63c12d1ffa98feb16f9fdcc529113";
+const NFT_ABI = [
+  "function balanceOf(address owner) view returns (uint256)"
+];
 
 export default function App() {
   const { setFrameReady, isFrameReady, context } = useMiniKit();
   const { isConnected, address } = useAccount();
   const { connect } = useConnect();
+  const publicClient = usePublicClient(); // wagmi's ethers provider
 
   const [frameAdded, setFrameAdded] = useState(false);
   const [activeTab, setActiveTabAction] = useState("landing");
-  const [checkingVoteStatus, setCheckingVoteStatus] = useState(false);
-  const [hasVoted, setHasVoted] = useState(false);
+  const [checkingStatus, setCheckingStatus] = useState(false);
 
   const { addFrame } = useAddFrame();
   const frameConnector = useMemo(() => farcasterFrame(), []);
 
-  // Check if the connected wallet has voted
-  const checkVoteStatus = useCallback(async (walletAddress: string) => {
-    if (!walletAddress) return;
-
-    setCheckingVoteStatus(true);
-    try {
-      const response = await fetch(`${API_BACKEND_URL}/api/voting/status`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ voter: walletAddress }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const voted = Boolean(data.hasVoted);
-        setHasVoted(voted);
-        setActiveTabAction(voted ? "results" : "landing");
-      } else {
-        setHasVoted(false);
-        setActiveTabAction("landing");
-      }
-    } catch (error) {
-      console.error("Error checking vote status:", error);
-      setHasVoted(false);
-      setActiveTabAction("landing");
-    } finally {
-      setCheckingVoteStatus(false);
-    }
-  }, []);
-
   const handleVoteSuccess = useCallback(() => {
-    setHasVoted(true);
     setActiveTabAction("results");
   }, []);
 
@@ -80,15 +55,48 @@ export default function App() {
     autoConnect();
   }, [isConnected, connect, frameConnector]);
 
+  const checkStatus = useCallback(async (walletAddress: string) => {
+    if (!walletAddress || !publicClient) return;
+
+    setCheckingStatus(true);
+
+    try {
+      // Check NFT ownership
+      const contract = new Contract(NFT_CONTRACT_ADDRESS, NFT_ABI, publicClient);
+      const balance = await contract.balanceOf(walletAddress);
+      const hasNFT = balance > 0;
+
+      // Check vote status
+      const res = await fetch(`${API_BACKEND_URL}/api/voting/status`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ voter: walletAddress }),
+      });
+
+      const data = await res.json();
+      const hasVoted = Boolean(data.hasVoted);
+
+      if (!hasNFT || hasVoted) {
+        setActiveTabAction("results");
+      } else {
+        setActiveTabAction("landing");
+      }
+    } catch (error) {
+      console.error("Error checking status:", error);
+      setActiveTabAction("results"); // fallback to results if error
+    } finally {
+      setCheckingStatus(false);
+    }
+  }, [publicClient]);
+
   useEffect(() => {
     if (isConnected && address) {
-      checkVoteStatus(address);
+      checkStatus(address);
     } else {
-      setHasVoted(false);
       setActiveTabAction("landing");
-      setCheckingVoteStatus(false);
+      setCheckingStatus(false);
     }
-  }, [isConnected, address, checkVoteStatus]);
+  }, [isConnected, address, checkStatus]);
 
   const handleAddFrame = useCallback(async () => {
     try {
@@ -139,14 +147,14 @@ export default function App() {
     }
   }, [connect, frameConnector]);
 
-  if (checkingVoteStatus) {
+  if (checkingStatus) {
     return (
       <div className="flex flex-col min-h-screen font-sans text-[var(--app-foreground)] mini-app-theme from-[var(--app-background)] to-[var(--app-gray)]">
         <div className="w-full max-w-md mx-auto px-4 py-3">
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
-              <p className="text-gray-600">Checking your vote status...</p>
+              <p className="text-gray-600">Checking access requirements...</p>
             </div>
           </div>
         </div>
@@ -184,17 +192,15 @@ export default function App() {
         </header>
 
         <main className="flex-1">
-
-          {/* ✅ Final gated rendering logic */}
-          {!checkingVoteStatus && activeTab === "landing" && (
+          {activeTab === "landing" && (
             <HomePage
               setActiveTabAction={setActiveTabAction}
-              hasVoted={hasVoted}
+              hasVoted={false}
               onVoteSuccess={handleVoteSuccess}
             />
           )}
 
-          {!checkingVoteStatus && activeTab === "results" && <Results />}
+          {activeTab === "results" && <Results />}
         </main>
 
         <footer className="mt-2 pt-4 flex justify-center">Outlast</footer>
