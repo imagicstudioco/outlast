@@ -12,18 +12,16 @@ import { Results } from "./components/Results";
 import { useAccount, useConnect, usePublicClient } from "wagmi";
 import { farcasterFrame } from "@farcaster/frame-wagmi-connector";
 import { API_BACKEND_URL } from "./config";
-import { Contract } from "ethers";
+import { readContract } from "wagmi/actions";
+import { erc721ABI } from "wagmi";
 
 const NFT_CONTRACT_ADDRESS = "0x9f4f7b2acff63c12d1ffa98feb16f9fdcc529113";
-const NFT_ABI = [
-  "function balanceOf(address owner) view returns (uint256)"
-];
 
 export default function App() {
   const { setFrameReady, isFrameReady, context } = useMiniKit();
   const { isConnected, address } = useAccount();
   const { connect } = useConnect();
-  const publicClient = usePublicClient(); // wagmi's ethers provider
+  const publicClient = usePublicClient();
 
   const [frameAdded, setFrameAdded] = useState(false);
   const [activeTab, setActiveTabAction] = useState("landing");
@@ -61,19 +59,24 @@ export default function App() {
     setCheckingStatus(true);
 
     try {
-      // Check NFT ownership
-      const contract = new Contract(NFT_CONTRACT_ADDRESS, NFT_ABI, publicClient);
-      const balance = await contract.balanceOf(walletAddress);
-      const hasNFT = balance > 0;
+      // ✅ Check if user owns the NFT
+      const balance = await readContract(publicClient, {
+        abi: erc721ABI,
+        address: NFT_CONTRACT_ADDRESS,
+        functionName: "balanceOf",
+        args: [walletAddress],
+      });
 
-      // Check vote status
-      const res = await fetch(`${API_BACKEND_URL}/api/voting/status`, {
+      const hasNFT = typeof balance === "bigint" && balance > 0n;
+
+      // ✅ Check vote status via API
+      const response = await fetch(`${API_BACKEND_URL}/api/voting/status`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ voter: walletAddress }),
       });
 
-      const data = await res.json();
+      const data = await response.json();
       const hasVoted = Boolean(data.hasVoted);
 
       if (!hasNFT || hasVoted) {
@@ -83,7 +86,7 @@ export default function App() {
       }
     } catch (error) {
       console.error("Error checking status:", error);
-      setActiveTabAction("results"); // fallback to results if error
+      setActiveTabAction("results");
     } finally {
       setCheckingStatus(false);
     }
@@ -100,13 +103,13 @@ export default function App() {
 
   const handleAddFrame = useCallback(async () => {
     try {
-      const frameAdded = await addFrame({
+      const added = await addFrame({
         id: "airtimeplus",
         title: "AirtimePlus",
         description: "Buy airtime with USDC",
         image: process.env.NEXT_PUBLIC_ICON_URL || "",
       });
-      setFrameAdded(Boolean(frameAdded));
+      setFrameAdded(Boolean(added));
     } catch (error) {
       console.error("Failed to add frame:", error);
     }
@@ -199,7 +202,6 @@ export default function App() {
               onVoteSuccess={handleVoteSuccess}
             />
           )}
-
           {activeTab === "results" && <Results />}
         </main>
 
