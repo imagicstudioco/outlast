@@ -50,14 +50,12 @@ export default function App() {
         
         setHasVoted(voted);
         
-        // Auto-navigate based on vote status
-        if (voted) {
-          console.log("User has voted, redirecting to results");
-          setActiveTabAction("results");
-        } else {
+        // Don't set activeTab here, let the useEffect handle it
+        if (!voted) {
           console.log("User hasn't voted, showing landing page");
           setActiveTabAction("landing");
         }
+        // If voted, the useEffect will handle the redirect
       } else {
         console.log("Vote status check failed, assuming not voted");
         setHasVoted(false);
@@ -108,8 +106,18 @@ export default function App() {
       console.log("Wallet not connected, showing landing page");
       setHasVoted(false);
       setActiveTabAction("landing");
+      setCheckingVoteStatus(false); // Make sure we're not stuck in loading
     }
   }, [isConnected, address, checkVoteStatus]);
+
+  // Add a separate useEffect to handle the redirect after state updates
+  useEffect(() => {
+    console.log("State changed:", { hasVoted, activeTab, checkingVoteStatus });
+    if (hasVoted && !checkingVoteStatus) {
+      console.log("Triggering redirect to results");
+      setActiveTabAction("results");
+    }
+  }, [hasVoted, checkingVoteStatus]);
 
   const handleAddFrame = useCallback(async () => {
     try {
@@ -213,6 +221,15 @@ export default function App() {
         </header>
 
         <main className="flex-1">
+          {/* Debug info - remove this after testing */}
+          <div className="bg-gray-100 p-2 mb-4 text-xs">
+            <strong>Debug:</strong> activeTab: {activeTab}, hasVoted: {hasVoted.toString()}, 
+            checkingVoteStatus: {checkingVoteStatus.toString()}, 
+            isConnected: {isConnected.toString()}, 
+            address: {address?.slice(0, 6)}...{address?.slice(-4)}
+          </div>
+          
+          {console.log("Rendering with activeTab:", activeTab, "hasVoted:", hasVoted)}
           {activeTab === "landing" && (
             <HomePage 
               setActiveTabAction={setActiveTabAction} 
