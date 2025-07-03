@@ -1,4 +1,4 @@
-const Finalist = require('../models/Finalist');
+const Finalist = require('../models/Finalists');
 
 exports.getFinalists = async (req, res) => {
   try {
