@@ -184,11 +184,6 @@ export default function App() {
         </header>
 
         <main className="flex-1">
-          <div className="bg-gray-100 p-2 mb-4 text-xs">
-            <strong>Debug:</strong> activeTab: {activeTab}, hasVoted:{" "}
-            {hasVoted.toString()}, isConnected: {isConnected.toString()},
-            address: {address?.slice(0, 6)}...{address?.slice(-4)}
-          </div>
 
           {/* ✅ Final gated rendering logic */}
           {!checkingVoteStatus && activeTab === "landing" && (
