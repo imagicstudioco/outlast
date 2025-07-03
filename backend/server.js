@@ -27,6 +27,13 @@ app.use(cors({
 }));
 
 
+// Root route
+app.get('/', (req, res) => {
+  console.log('📡 GET / - Root endpoint called');
+  res.send('<h1>Outlast Voting Backend API Server Is Running</h1>');
+});
+
+
 app.use('/api/voting', votingRoutes);
 app.use('/finalists', finalistsRoutes);
 
