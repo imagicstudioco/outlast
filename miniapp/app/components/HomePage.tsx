@@ -7,7 +7,7 @@ import { Card } from "./Card";
 import { API_BACKEND_URL } from "../config";
 
 interface Finalist {
-  id: string;
+  _id: string;
   username: string;
 }
 
@@ -24,6 +24,7 @@ export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
   const [hasVoted, setHasVoted] = useState<boolean | undefined>(undefined);
   const [checkingVoteStatus, setCheckingVoteStatus] = useState(false);
 
+  // Fetch finalists
   const fetchFinalists = async () => {
     setLoading(true);
     setError(null);
@@ -42,75 +43,64 @@ export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
     }
   };
 
+  // Check vote status
   const checkVoteStatus = useCallback(async (walletAddress: string) => {
     if (!walletAddress) return;
+
     setCheckingVoteStatus(true);
     try {
-      const response = await fetch(`${API_BACKEND_URL}/api/voting/check-vote-status`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          voterId: walletAddress
-        }),
+      const response = await fetch(`${API_BACKEND_URL}/api/voting/status`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ voter: walletAddress }),
       });
-      if (response.ok) {
-        const data = await response.json();
-        // Ensure hasVoted is a boolean
-        const hasVoted = Boolean(data.hasVoted);
-        setHasVoted(hasVoted);
-        // If user has already voted, redirect to results
-        if (hasVoted) {
-          setActiveTabAction("results");
-        }
-      } else {
-        setHasVoted(false);
+
+      const data = await response.json();
+      const voted = Boolean(data.hasVoted);
+      setHasVoted(voted);
+
+      if (voted) {
+        setActiveTabAction("results");
       }
     } catch (error) {
-      console.error('Error checking vote status:', error);
+      console.error("Error checking vote status:", error);
       setHasVoted(false);
     } finally {
       setCheckingVoteStatus(false);
     }
   }, [setActiveTabAction]);
 
+  // Submit vote
   const handleVote = async (username: string, id: string) => {
     if (!isConnected || !address) {
       alert("Please connect your wallet first");
       return;
     }
 
-    // Double-check vote status before allowing vote
     if (hasVoted) {
-      alert("You have already voted. Redirecting to results...");
+      alert("You’ve already voted. Redirecting to results...");
       setActiveTabAction("results");
       return;
     }
 
     setVoting(true);
     try {
-      const response = await fetch(`${API_BACKEND_URL}/api/voting/submit-vote`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+      const response = await fetch(`${API_BACKEND_URL}/api/voting/vote`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          voterId: address,
-          votedForId: id,
-          username: username
+          voter: address,
+          votedFor: id,
         }),
       });
 
+      const result = await response.json();
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to submit vote");
+        throw new Error(result.error || "Vote failed");
       }
 
-      const result = await response.json();
-      console.log(`Vote submitted successfully for ${result.votedFor}`);
-      
-      // Mark as voted and navigate to results page
+      console.log(`✅ Voted for: ${username}`);
       setHasVoted(true);
       setActiveTabAction("results");
     } catch (error) {
@@ -122,7 +112,7 @@ export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
     }
   };
 
-  // Check vote status when wallet connects or changes
+  // On wallet connect or change
   useEffect(() => {
     if (isConnected && address) {
       checkVoteStatus(address);
@@ -131,11 +121,12 @@ export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
     }
   }, [isConnected, address]);
 
+  // Fetch finalists on load
   useEffect(() => {
     fetchFinalists();
   }, []);
 
-  // Show loading while checking vote status
+  // UI while checking vote status
   if (checkingVoteStatus) {
     return (
       <div className="space-y-6 animate-fade-in p-6">
@@ -155,7 +146,7 @@ export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
     );
   }
 
-  // Show message if user has already voted
+  // If already voted
   if (hasVoted) {
     return (
       <div className="space-y-6 animate-fade-in p-6">
@@ -179,6 +170,7 @@ export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
     );
   }
 
+  // Main voting UI
   return (
     <div className="space-y-6 animate-fade-in p-6">
       <div className="text-center mb-8">
@@ -216,7 +208,7 @@ export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
             {finalists.length > 0 ? (
               finalists.map((finalist, index) => (
                 <div
-                  key={finalist.id}
+                  key={finalist._id}
                   className="flex justify-between items-center p-4 bg-gray-50 rounded-lg border"
                 >
                   <div className="flex items-center space-x-4">
@@ -228,7 +220,7 @@ export const HomePage: React.FC<HomePageProps> = ({ setActiveTabAction }) => {
                     </span>
                   </div>
                   <Button
-                    onClick={() => handleVote(finalist.username, finalist.id)}
+                    onClick={() => handleVote(finalist.username, finalist._id)}
                     disabled={voting || Boolean(hasVoted)}
                     className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 disabled:opacity-50"
                   >
